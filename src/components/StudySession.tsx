@@ -8,6 +8,7 @@ import {
   Repeat,
   Sparkles,
   X,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -100,6 +101,7 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
   }
 
   const answeredQuiz = Object.values(quizSelections).filter((s) => s.length > 0).length;
+  const sprint = plan.mode === "sprint";
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 p-8">
@@ -129,7 +131,11 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
       {step === "read" ? (
         <>
           <NoteReader
-            note={plan.notes[readIndex]}
+            note={{
+              ...plan.notes[readIndex],
+              // A sprint reads the digest; older sessions have no `reading` array.
+              body: plan.reading[readIndex] ?? plan.notes[readIndex].body,
+            }}
             eyebrow={
               <>
                 <Badge variant="outline" className="font-mono text-[0.7rem]">
@@ -138,6 +144,12 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
                 <span className="text-xs text-muted-foreground">
                   Тема {readIndex + 1} з {plan.topics.length}
                 </span>
+                {sprint ? (
+                  <Badge variant="secondary" className="gap-1">
+                    <Zap className="size-3" />
+                    Стисло
+                  </Badge>
+                ) : null}
                 {plan.topics[readIndex].is_review ? (
                   <Badge variant="secondary" className="gap-1">
                     <Repeat className="size-3" />
@@ -167,10 +179,13 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
           <div className="space-y-1">
             <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
               <PenLine className="size-5 text-primary" />
-              Відкриті питання
+              {sprint ? "Ключові пункти" : "Відкриті питання"}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Відповідайте розгорнуто, як на екзамені. Розбір побачите наприкінці сесії.
+              {sprint
+                ? "Перелічіть головне короткими пунктами — зв'язний текст не потрібен, оцінюється лише суть."
+                : "Відповідайте розгорнуто, як на екзамені."}{" "}
+              Розбір побачите наприкінці сесії.
             </p>
           </div>
 
@@ -184,7 +199,7 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
                   {index + 1}. {question.question}
                 </p>
                 <Textarea
-                  rows={8}
+                  rows={sprint ? 5 : 8}
                   value={openAnswers[question.topic_id] ?? ""}
                   onChange={(event) => {
                     // Read the value now: React clears `currentTarget` once the handler
@@ -196,7 +211,7 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
                       [question.topic_id]: value,
                     }));
                   }}
-                  placeholder="Ваша відповідь…"
+                  placeholder={sprint ? "Коротко, пунктами…" : "Ваша відповідь…"}
                 />
               </CardContent>
             </Card>

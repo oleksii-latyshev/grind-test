@@ -6,7 +6,8 @@ use serde::Serialize;
 use tauri::{Emitter, Manager, State};
 
 use crate::generate::{
-    self, GenerationEvent, Hint, KnowledgeBatchReport, QuizRequest, SessionPlan, SessionResult,
+    self, GenerationEvent, Hint, KnowledgeBatchReport, QuizRequest, SessionMode, SessionPlan,
+    SessionResult,
 };
 use crate::vault::knowledge::{self, KnowledgeNote};
 use crate::vault::progress::{self, Attempt, AttemptResult, SubjectStats};
@@ -318,9 +319,16 @@ pub async fn start_study_session(
     subject_id: String,
     size: Option<usize>,
     topic_ids: Option<Vec<String>>,
+    mode: Option<SessionMode>,
 ) -> CmdResult<SessionPlan> {
     let vault = app.state::<AppState>().vault();
-    generate::start_session(&vault, &subject_id, size.unwrap_or(3), topic_ids)
+    generate::start_session(
+        &vault,
+        &subject_id,
+        size.unwrap_or(3),
+        topic_ids,
+        mode.unwrap_or_default(),
+    )
         .await
         .map_err(fail)
 }

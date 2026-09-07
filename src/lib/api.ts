@@ -11,6 +11,7 @@ import type {
   Quiz,
   QuizRequest,
   QuizSummary,
+  SessionMode,
   SessionPlan,
   SessionResult,
   SessionSummary,
@@ -77,10 +78,16 @@ export const api = {
    * Picks the topics, then generates the open questions and mini-quiz in one call.
    * Passing `topicIds` overrides the scheduler with an explicit choice.
    */
-  startStudySession: (subjectId: string, size: number, topicIds?: string[]) =>
+  startStudySession: (
+    subjectId: string,
+    size: number,
+    mode: SessionMode,
+    topicIds?: string[],
+  ) =>
     invoke<SessionPlan>("start_study_session", {
       subjectId,
       size,
+      mode,
       topicIds: topicIds ?? null,
     }),
 

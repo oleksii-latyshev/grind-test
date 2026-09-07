@@ -99,9 +99,18 @@ fn knowledge_prompt(subject: &Subject, topic: &Topic) -> String {
         })
         .unwrap_or_default();
 
+    // A nested topic reads as a fragment without the group heading above it
+    // ("Операційні підсилювачі" under "Аналогові компоненти").
+    let group = topic
+        .group
+        .as_deref()
+        .map(|group| format!("\nGroup within the section: {group}"))
+        .unwrap_or_default();
+
     KNOWLEDGE_PROMPT
         .replace("{{SUBJECT_TITLE}}", &subject.title)
         .replace("{{SECTION_TITLE}}", &topic.section_title)
+        .replace("{{GROUP}}", &group)
         .replace("{{TOPIC_TITLE}}", &topic.title)
         .replace(
             "{{SIBLING_TOPICS}}",
@@ -631,6 +640,7 @@ mod tests {
 // ---------------------------------------------------------------------------
 
 const SESSION_PROMPT: &str = include_str!("../prompts/session.md");
+const SESSION_SPRINT_PROMPT: &str = include_str!("../prompts/session_sprint.md");
 const GRADE_OPEN_PROMPT: &str = include_str!("../prompts/grade_open.md");
 const SESSION_SCHEMA: &str = include_str!("../schemas/session.json");
 const GRADE_OPEN_SCHEMA: &str = include_str!("../schemas/grade_open.json");
@@ -642,6 +652,53 @@ const SESSION_EXCERPT_CHARS: usize = 9000;
 /// Beyond this the single generation call has to cover too much ground, and the reading
 /// stretch stops being one sitting.
 pub const MAX_SESSION_TOPICS: usize = 6;
+
+/// A sprint reads digests rather than full notes, so more topics still fit in one sitting
+/// and in one generation call.
+pub const MAX_SPRINT_TOPICS: usize = 10;
+
+/// How a session trades depth for coverage.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SessionMode {
+    /// Full notes, an essay-length written answer, four quiz questions per topic.
+    #[default]
+    Full,
+    /// Condensed notes, recall as a short list, three quiz questions per topic.
+    Sprint,
+}
+
+impl SessionMode {
+    fn max_topics(self) -> usize {
+        match self {
+            SessionMode::Full => MAX_SESSION_TOPICS,
+            SessionMode::Sprint => MAX_SPRINT_TOPICS,
+        }
+    }
+
+    fn prompt(self) -> &'static str {
+        match self {
+            SessionMode::Full => SESSION_PROMPT,
+            SessionMode::Sprint => SESSION_SPRINT_PROMPT,
+        }
+    }
+
+    fn questions_per_topic(self) -> usize {
+        match self {
+            SessionMode::Full => 4,
+            SessionMode::Sprint => 3,
+        }
+    }
+
+    /// Told to the grader, so a deliberately terse sprint answer is not marked down for
+    /// being terse — otherwise every sprint score would collapse and drag the ladder with it.
+    fn answer_style(self) -> &'static str {
+        match self {
+            SessionMode::Full => "The student was asked for a developed written answer of several paragraphs, as in the oral exam.",
+            SessionMode::Sprint => "The student was in rapid revision mode and was asked to recall the substance as a short list. Judge only whether the required points are named and correct. Do not deduct for telegraphic style, missing introductions, sentence fragments or absent connective prose — that form was requested.",
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenQuestion {
@@ -670,8 +727,14 @@ pub struct SessionPlan {
     pub id: String,
     pub subject: String,
     pub created_at: String,
+    #[serde(default)]
+    pub mode: SessionMode,
     pub topics: Vec<study::PlannedTopic>,
     pub notes: Vec<KnowledgeNote>,
+    /// What the student actually reads, aligned with `topics`: the full note, or its digest
+    /// in a sprint.
+    #[serde(default)]
+    pub reading: Vec<String>,
     pub open_questions: Vec<OpenQuestion>,
     pub quiz: Vec<Question>,
 }
@@ -686,6 +749,7 @@ pub async fn start_session(
     subject_id: &str,
     size: usize,
     topic_ids: Option<Vec<String>>,
+    mode: SessionMode,
 ) -> Result<SessionPlan> {
     let subject = syllabus::load(vault, subject_id)?;
     let state = study::load(vault);
@@ -703,7 +767,7 @@ pub async fn start_session(
             let chosen: Vec<study::PlannedTopic> = studiable
                 .iter()
                 .filter(|topic| ids.contains(&topic.id))
-                .take(MAX_SESSION_TOPICS)
+                .take(mode.max_topics())
                 .map(|topic| study::planned_for(&state, topic))
                 .collect();
             if chosen.is_empty() {
@@ -711,32 +775,47 @@ pub async fn start_session(
             }
             chosen
         }
-        _ => study::plan_session(&state, &studiable, size.clamp(1, MAX_SESSION_TOPICS)),
+        _ => {
+            let size = size.clamp(1, mode.max_topics());
+            match mode {
+                SessionMode::Full => study::plan_session(&state, &studiable, size),
+                SessionMode::Sprint => study::plan_sprint(&state, &studiable, size),
+            }
+        }
     };
     if planned.is_empty() {
         bail!("nothing is due right now — every topic in this subject is scheduled for later");
     }
 
     let mut notes = Vec::new();
+    let mut reading = Vec::new();
     let mut knowledge_block = String::new();
     for entry in &planned {
         let Some(note) = knowledge::read(vault, &entry.topic)? else {
             continue;
         };
+        // The questions are generated from exactly what the student is shown, so a sprint
+        // can never be tested on material its digest left out.
+        let shown = match mode {
+            SessionMode::Full => note.body.clone(),
+            SessionMode::Sprint => knowledge::digest(&note.body),
+        };
         knowledge_block.push_str(&format!(
             "### topic_id: {}\nТема: {}\n\n{}\n\n",
             entry.topic.id,
             entry.topic.title,
-            truncate_chars(&note.body, SESSION_EXCERPT_CHARS)
+            truncate_chars(&shown, SESSION_EXCERPT_CHARS)
         ));
+        reading.push(shown);
         notes.push(note);
     }
     if notes.is_empty() {
         bail!("could not load the knowledge notes for the planned topics");
     }
 
-    let quiz_count = (notes.len() * 4).clamp(6, 20);
-    let prompt = SESSION_PROMPT
+    let quiz_count = (notes.len() * mode.questions_per_topic()).clamp(6, 24);
+    let prompt = mode
+        .prompt()
         .replace("{{KNOWLEDGE}}", &knowledge_block)
         .replace("{{QUIZ_COUNT}}", &quiz_count.to_string());
 
@@ -776,11 +855,13 @@ pub async fn start_session(
         ),
         subject: subject_id.to_string(),
         created_at: now.to_rfc3339(),
+        mode,
         topics: planned
             .into_iter()
             .filter(|entry| topic_ids.contains(&entry.topic.id))
             .collect(),
         notes,
+        reading,
         open_questions,
         quiz,
     };
@@ -970,7 +1051,9 @@ async fn grade_open(
         ));
     }
 
-    let prompt = GRADE_OPEN_PROMPT.replace("{{ANSWERS}}", &block);
+    let prompt = GRADE_OPEN_PROMPT
+        .replace("{{ANSWER_STYLE}}", plan.mode.answer_style())
+        .replace("{{ANSWERS}}", &block);
     let response = agy::run::<GradingDraft>(
         &prompt,
         ModelTier::Smart,

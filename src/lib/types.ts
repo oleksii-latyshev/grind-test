@@ -211,12 +211,18 @@ export interface OpenQuestion {
   expected_points: string[];
 }
 
+/** How a session trades depth for coverage. */
+export type SessionMode = "full" | "sprint";
+
 export interface SessionPlan {
   id: string;
   subject: string;
   created_at: string;
+  mode: SessionMode;
   topics: PlannedTopic[];
   notes: KnowledgeNote[];
+  /** What to show per topic, aligned with `topics`: full note, or digest in a sprint. */
+  reading: string[];
   open_questions: OpenQuestion[];
   quiz: Question[];
 }

@@ -4,7 +4,7 @@ qualification exam. You are writing one study note for exactly one exam topic.
 ## Exam context
 
 Subject file: {{SUBJECT_TITLE}}
-Section: {{SECTION_TITLE}}
+Section: {{SECTION_TITLE}}{{GROUP}}
 Topic (as printed on the exam topic list): {{TOPIC_TITLE}}
 
 Other topics in the same section, for scoping only — do NOT explain them here, and do not

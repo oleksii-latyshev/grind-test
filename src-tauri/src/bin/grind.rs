@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
-use grind_test_lib::generate::{self, GenerationEvent, QuizRequest};
+use grind_test_lib::generate::{self, GenerationEvent, QuizRequest, SessionMode};
 use grind_test_lib::vault::paths::resolve_vault_root;
 use grind_test_lib::vault::progress;
 use grind_test_lib::vault::quiz::Difficulty;
@@ -58,6 +58,9 @@ enum Command {
         /// Study these topic ids instead of what the scheduler would serve.
         #[arg(short, long = "topic")]
         topics: Vec<String>,
+        /// Rapid revision: condensed notes, recall as a list, shorter quiz.
+        #[arg(long)]
+        sprint: bool,
     },
     /// Grade a session started with `session`, from a JSON file of answers.
     ///
@@ -132,9 +135,15 @@ async fn main() -> Result<()> {
             subject,
             size,
             topics,
+            sprint,
         } => {
             let chosen = (!topics.is_empty()).then_some(topics);
-            let plan = generate::start_session(&vault, &subject, size, chosen).await?;
+            let mode = if sprint {
+                SessionMode::Sprint
+            } else {
+                SessionMode::Full
+            };
+            let plan = generate::start_session(&vault, &subject, size, chosen, mode).await?;
             println!("session {} — {} topics", plan.id, plan.topics.len());
             for entry in &plan.topics {
                 println!(

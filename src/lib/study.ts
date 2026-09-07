@@ -1,4 +1,4 @@
-import type { Stage, TopicStudy } from "./types";
+import type { SessionMode, Stage, TopicStudy } from "./types";
 
 /** Ukrainian labels and colour roles for the study ladder, shared by every view. */
 export const STAGES: Record<Stage, { label: string; className: string }> = {
@@ -37,4 +37,33 @@ export function scoreTone(score: number): string {
   if (score >= 80) return "text-primary";
   if (score >= 60) return "text-chart-3";
   return "text-destructive";
+}
+
+
+/**
+ * Minutes a topic takes end to end — reading, answering, quiz, reading the feedback.
+ *
+ * `full` is measured: roughly 20 minutes per topic in practice. `sprint` is an estimate
+ * built from the parts that shrink — a digest is about a third of a note, and a bulleted
+ * recall replaces several paragraphs of writing.
+ */
+export const MINUTES_PER_TOPIC: Record<SessionMode, number> = {
+  full: 20,
+  sprint: 8,
+};
+
+export const SESSION_SIZES: Record<SessionMode, number[]> = {
+  full: [2, 3, 5],
+  sprint: [5, 8, 10],
+};
+
+export const MAX_TOPICS: Record<SessionMode, number> = {
+  full: 6,
+  sprint: 10,
+};
+
+export function formatHours(minutes: number): string {
+  const hours = minutes / 60;
+  if (hours < 1) return `${Math.round(minutes)} хв`;
+  return `${hours < 10 ? hours.toFixed(1) : Math.round(hours)} год`;
 }

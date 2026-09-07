@@ -36,6 +36,18 @@ Cost per session is fixed at **two model calls**: one fast call producing the op
 (with an `expected_points` rubric) and the whole mini-quiz together, one smart call grading
 every written answer at once. Never grade answers one call at a time.
 
+`SessionMode` picks the trade-off. **Full** reads the whole note, asks for an essay-length
+answer and 4 quiz questions per topic (~20 min/topic). **Sprint** reads
+`knowledge::digest` — the summary plus the key-terms and exam-traps sections, about a third
+of the note — asks for recall as a short list and 3 questions per topic (~8 min/topic), and
+plans with `plan_sprint`, which covers unseen topics before revisiting anything. The digest
+needs no model call: the generator already writes those sections into every note.
+
+Questions are always generated from exactly what the student was shown, so a sprint can never
+be tested on material its digest omitted. The grading prompt is told which mode produced the
+answer — without that, a deliberately terse sprint answer gets marked down for terseness and
+drags the whole ladder with it.
+
 A topic's session score is `0.6 × open + 0.4 × quiz` — the written half weighs more because
 it is what the exam actually asks for. That score moves the topic along a Leitner ladder in
 `vault/progress/study.json`: pass (≥80) climbs a level, ≥60 holds, below 60 drops one, and
@@ -137,8 +149,16 @@ it through `state.vault()`, never a stored copy. When file access fails, report 
 `paths::describe_vault` separates a denied macOS permission from a wrong folder, and the UI
 depends on that distinction. Never let a permission error surface as an empty subject list.
 
-Subjects are the syllabus filenames: `f2`, `f3`, `f7` (242 topics total). A topic id is
-`<subject>/<section-index>.<topic-index>`, e.g. `f3/2.7`.
+Subjects are the syllabus filenames: `f2`, `f3`, `f7` (252 topics total). A topic id is
+`<subject>/<section-index>.<position>`, e.g. `f3/2.7`.
+
+Numbering in a syllabus may be nested — f7's section 1.7 lists `1.` as a group heading with
+`1.1.`…`1.8.` beneath it. `split_numbered` therefore parses the **whole** numeric prefix, and
+`index` is the topic's position within its section, not the number printed next to it. A
+group heading is not a topic; it is recorded as `Topic::group` and passed to the knowledge
+prompt as context. Parsing only the first number collapses every nested item onto one id,
+and because notes are addressed by `SS.TT-` prefix, their notes then silently overwrite each
+other.
 
 `vault/originals/` holds the source PDFs the syllabi came from — reference only, not read by
 the app.
