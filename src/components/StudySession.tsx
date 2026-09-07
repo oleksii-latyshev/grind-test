@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 
 import { NoteReader } from "@/components/NoteReader";
+import { ReadingSizeControl } from "@/components/ReadingSizeControl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -95,7 +96,7 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 p-8">
-      <header className="space-y-3">
+      <header className="sticky top-12 z-10 -mx-8 space-y-3 border-b border-border bg-background/95 px-8 py-3 backdrop-blur">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             {(["read", "open", "quiz"] as const).map((value, index) => (
@@ -107,10 +108,13 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
               </span>
             ))}
           </div>
-          <Button variant="ghost" size="sm" onClick={onExit}>
-            <X className="size-4" />
-            Вийти
-          </Button>
+          <div className="flex items-center gap-2">
+            {step === "read" ? <ReadingSizeControl /> : null}
+            <Button variant="ghost" size="sm" onClick={onExit}>
+              <X className="size-4" />
+              Вийти
+            </Button>
+          </div>
         </div>
         <Progress value={step === "read" ? ((readIndex + 1) / plan.topics.length) * 60 : step === "open" ? 75 : 90} />
       </header>

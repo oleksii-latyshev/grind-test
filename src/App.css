@@ -152,21 +152,29 @@
 /* Typography for generated knowledge notes and question explanations.
    Hand-rolled rather than @tailwindcss/typography: one container, few rules. */
 .prose-note {
-  @apply text-base text-foreground;
+  @apply text-foreground;
+  font-size: var(--reading-font-size, 1rem);
   line-height: 1.75;
   max-width: 68ch;
 }
 .prose-note > * + * {
-  @apply mt-4;
+  margin-top: 1em;
 }
 .prose-note h2 {
-  @apply mt-8 border-b border-border pb-2 text-lg font-semibold tracking-tight first:mt-0;
+  @apply border-b border-border font-semibold tracking-tight first:mt-0;
+  font-size: 1.2em;
+  margin-top: 2em;
+  padding-bottom: 0.35em;
 }
 .prose-note h3 {
-  @apply mt-6 text-base font-semibold tracking-tight;
+  @apply font-semibold tracking-tight;
+  font-size: 1.05em;
+  margin-top: 1.6em;
 }
 .prose-note h4 {
-  @apply mt-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground;
+  @apply font-semibold uppercase tracking-wide text-muted-foreground;
+  font-size: 0.85em;
+  margin-top: 1.3em;
 }
 .prose-note ul {
   @apply list-disc space-y-1.5 pl-6;
@@ -194,7 +202,8 @@
   @apply border-l-2 border-border pl-4 text-muted-foreground;
 }
 .prose-note table {
-  @apply w-full border-collapse text-sm;
+  @apply w-full border-collapse;
+  font-size: 0.9em;
 }
 .prose-note th,
 .prose-note td {
