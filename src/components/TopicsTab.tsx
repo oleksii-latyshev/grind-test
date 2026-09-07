@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { api, errorMessage, onGenerationProgress } from "@/lib/api";
-import { STAGES } from "@/lib/study";
+import { STAGES, stageOf } from "@/lib/study";
 import type { Stage, SubjectDetail, Topic } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -38,14 +38,7 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
     [detail.subject, covered],
   );
 
-  function stageOf(topicId: string): Stage {
-    const entry = detail.topic_study[topicId];
-    if (!entry) return "new";
-    if (entry.level === 0) return entry.read_count > 0 ? "reading" : "new";
-    if (entry.level <= 2) return "learning";
-    if (entry.level <= 4) return "review";
-    return "mastered";
-  }
+
 
   function toggle(topicId: string) {
     setSelected((current) => {
@@ -196,7 +189,7 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
                         {topic.title}
                       </span>
                     </button>
-                    <StageMark stage={stageOf(topic.id)} hasNote={has} />
+                    <StageMark stage={stageOf(detail.topic_study[topic.id])} hasNote={has} />
                   </li>
                 );
               })}

@@ -43,7 +43,14 @@ the new level sets the review date (1 → 2 → 4 → 7 → 14 → 30 days). `st
 serves overdue reviews first, then unseen topics in syllabus order.
 
 Sessions persist to `vault/progress/sessions/` on start, so quitting mid-session loses
-nothing, and grading reads the plan back from disk rather than trusting the client.
+nothing, and grading reads the plan back from disk rather than trusting the client. An
+ungraded session stays resumable (`unfinished_sessions` / `resume_study_session`) and the
+written answers are drafted to `localStorage` while typing, so an interrupted session costs
+neither the generation call nor the typing.
+
+`plan_session` is the default, but an explicit `topic_ids` list overrides it — the student
+knows better than the ladder which topics the exam is about to ask for. Either way a session
+is capped at `MAX_SESSION_TOPICS`.
 
 **Model economy is a hard requirement.** Smart model = knowledge generation + hints (rare,
 cached on disk). Fast model = quiz generation (frequent). Never generate knowledge with the
@@ -156,6 +163,10 @@ Tauri events (`generation://progress`). A crash or quit must never lose complete
 - Timestamps are RFC3339 UTC.
 - Prefer `serde` structs over `serde_json::Value` for anything crossing the Rust↔TS boundary,
   and keep the mirrored TS types in `src/lib/types.ts` in sync by hand.
+- In React event handlers, read `event.target.value` into a local before calling `setState`.
+  A functional updater runs during the render phase, by which point React has nulled
+  `event.currentTarget` — reading it in there throws mid-render and unmounts the whole tree.
+- Keep the ladder thresholds in `src/lib/study.ts` (`stageOf`), never inline in a component.
 
 ## Commands
 

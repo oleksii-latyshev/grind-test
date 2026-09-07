@@ -13,6 +13,7 @@ import type {
   QuizSummary,
   SessionPlan,
   SessionResult,
+  SessionSummary,
   SubjectDetail,
   SubjectOverview,
   VaultInfo,
@@ -72,9 +73,22 @@ export const api = {
   listAttempts: (subjectId?: string) =>
     invoke<Attempt[]>("list_attempts", { subjectId: subjectId ?? null }),
 
-  /** Picks the topics, then generates the open questions and mini-quiz in one call. */
-  startStudySession: (subjectId: string, size: number) =>
-    invoke<SessionPlan>("start_study_session", { subjectId, size }),
+  /**
+   * Picks the topics, then generates the open questions and mini-quiz in one call.
+   * Passing `topicIds` overrides the scheduler with an explicit choice.
+   */
+  startStudySession: (subjectId: string, size: number, topicIds?: string[]) =>
+    invoke<SessionPlan>("start_study_session", {
+      subjectId,
+      size,
+      topicIds: topicIds ?? null,
+    }),
+
+  unfinishedSessions: (subjectId: string) =>
+    invoke<SessionSummary[]>("unfinished_sessions", { subjectId }),
+
+  resumeStudySession: (subjectId: string, sessionId: string) =>
+    invoke<SessionPlan>("resume_study_session", { subjectId, sessionId }),
 
   finishStudySession: (options: {
     subjectId: string;

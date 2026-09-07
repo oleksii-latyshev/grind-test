@@ -242,6 +242,13 @@ export interface TopicOutcome {
   due_at: string | null;
 }
 
+export interface SessionSummary {
+  id: string;
+  subject: string;
+  created_at: string;
+  topic_titles: string[];
+}
+
 export interface SessionResult {
   session_id: string;
   subject: string;

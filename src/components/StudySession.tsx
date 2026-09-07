@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -19,6 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { api, errorMessage } from "@/lib/api";
+import { clearDraft, readDraft, writeDraft } from "@/lib/drafts";
 import { STAGES, formatDue, scoreTone } from "@/lib/study";
 import type { SessionPlan, SessionResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -40,10 +41,15 @@ interface Props {
 export function StudySession({ plan, onExit, onFinished }: Props) {
   const [step, setStep] = useState<Step>("read");
   const [readIndex, setReadIndex] = useState(0);
-  const [openAnswers, setOpenAnswers] = useState<Record<string, string>>({});
+  // Restored from the local draft, so re-entering a session brings the typing back.
+  const [openAnswers, setOpenAnswers] = useState<Record<string, string>>(() => readDraft(plan.id));
   const [quizSelections, setQuizSelections] = useState<Record<string, number[]>>({});
   const [result, setResult] = useState<SessionResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    writeDraft(plan.id, openAnswers);
+  }, [plan.id, openAnswers]);
 
   async function advanceReading() {
     const topic = plan.topics[readIndex];
@@ -79,6 +85,7 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
         quizSelections,
       });
       setResult(outcome);
+      clearDraft(plan.id);
       setStep("done");
       window.scrollTo({ top: 0 });
     } catch (error) {
@@ -179,12 +186,16 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
                 <Textarea
                   rows={8}
                   value={openAnswers[question.topic_id] ?? ""}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    // Read the value now: React clears `currentTarget` once the handler
+                    // returns, and a functional update runs later, during render — reading
+                    // it in there throws and takes the whole tree down.
+                    const value = event.target.value;
                     setOpenAnswers((current) => ({
                       ...current,
-                      [question.topic_id]: event.currentTarget.value,
-                    }))
-                  }
+                      [question.topic_id]: value,
+                    }));
+                  }}
                   placeholder="Ваша відповідь…"
                 />
               </CardContent>

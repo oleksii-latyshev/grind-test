@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { GraduationCap, Moon, Sun } from "lucide-react";
 
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { QuizScreen } from "@/components/QuizScreen";
 import { ReaderScreen } from "@/components/ReaderScreen";
 import { ResultsScreen } from "@/components/ResultsScreen";
@@ -52,6 +53,7 @@ function App() {
       </header>
 
       <main>
+        <ErrorBoundary onReset={() => setView({ name: "subjects" })}>
         {view.name === "subjects" ? (
           <SubjectsScreen onOpen={(subjectId) => setView({ name: "subject", subjectId })} />
         ) : view.name === "subject" ? (
@@ -86,6 +88,7 @@ function App() {
             onBackToSubject={() => setView({ name: "subject", subjectId: view.quiz.subject })}
           />
         )}
+        </ErrorBoundary>
       </main>
 
       <Toaster />

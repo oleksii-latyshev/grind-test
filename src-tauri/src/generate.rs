@@ -639,6 +639,10 @@ const GRADE_OPEN_SCHEMA: &str = include_str!("../schemas/grade_open.json");
 /// student was never shown.
 const SESSION_EXCERPT_CHARS: usize = 9000;
 
+/// Beyond this the single generation call has to cover too much ground, and the reading
+/// stretch stops being one sitting.
+pub const MAX_SESSION_TOPICS: usize = 6;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenQuestion {
     pub topic_id: String,
@@ -674,7 +678,15 @@ pub struct SessionPlan {
 
 /// Build a session: pick topics, load their notes, and generate the open questions and the
 /// mini-quiz in a single fast-model call.
-pub async fn start_session(vault: &Vault, subject_id: &str, size: usize) -> Result<SessionPlan> {
+///
+/// `topic_ids` overrides the scheduler — the student can insist on the topics they know are
+/// coming up, rather than the ones the ladder would serve next.
+pub async fn start_session(
+    vault: &Vault,
+    subject_id: &str,
+    size: usize,
+    topic_ids: Option<Vec<String>>,
+) -> Result<SessionPlan> {
     let subject = syllabus::load(vault, subject_id)?;
     let state = study::load(vault);
 
@@ -686,7 +698,21 @@ pub async fn start_session(vault: &Vault, subject_id: &str, size: usize) -> Resu
         bail!("no knowledge notes exist for '{subject_id}' yet — generate them before studying");
     }
 
-    let planned = study::plan_session(&state, &studiable, size.clamp(1, 6));
+    let planned = match topic_ids {
+        Some(ids) if !ids.is_empty() => {
+            let chosen: Vec<study::PlannedTopic> = studiable
+                .iter()
+                .filter(|topic| ids.contains(&topic.id))
+                .take(MAX_SESSION_TOPICS)
+                .map(|topic| study::planned_for(&state, topic))
+                .collect();
+            if chosen.is_empty() {
+                bail!("none of the chosen topics has a knowledge note yet");
+            }
+            chosen
+        }
+        _ => study::plan_session(&state, &studiable, size.clamp(1, MAX_SESSION_TOPICS)),
+    };
     if planned.is_empty() {
         bail!("nothing is due right now — every topic in this subject is scheduled for later");
     }
@@ -998,4 +1024,50 @@ pub fn load_session(vault: &Vault, subject_id: &str, session_id: &str) -> Result
     let stored: StoredSession = serde_json::from_str(&raw)
         .with_context(|| format!("parsing session {}", path.display()))?;
     Ok(stored.plan)
+}
+
+
+/// A session that was started but never graded.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionSummary {
+    pub id: String,
+    pub subject: String,
+    pub created_at: String,
+    pub topic_titles: Vec<String>,
+}
+
+/// Unfinished sessions for a subject, newest first, so an interrupted one can be resumed
+/// instead of paying for a fresh generation call.
+pub fn list_unfinished(vault: &Vault, subject_id: &str) -> Vec<SessionSummary> {
+    let Ok(entries) = std::fs::read_dir(vault.sessions_dir()) else {
+        return Vec::new();
+    };
+    let prefix = format!("{subject_id}-");
+
+    let mut out: Vec<SessionSummary> = entries
+        .flatten()
+        .filter(|entry| {
+            entry
+                .file_name()
+                .to_str()
+                .is_some_and(|name| name.starts_with(&prefix) && name.ends_with(".json"))
+        })
+        .filter_map(|entry| std::fs::read_to_string(entry.path()).ok())
+        .filter_map(|raw| serde_json::from_str::<StoredSession>(&raw).ok())
+        .filter(|stored| stored.result.is_none())
+        .map(|stored| SessionSummary {
+            id: stored.plan.id,
+            subject: stored.plan.subject,
+            created_at: stored.plan.created_at,
+            topic_titles: stored
+                .plan
+                .topics
+                .into_iter()
+                .map(|entry| entry.topic.title)
+                .collect(),
+        })
+        .collect();
+
+    out.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    out
 }

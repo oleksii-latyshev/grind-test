@@ -38,6 +38,8 @@ pub fn run() {
             commands::get_hint,
             commands::list_attempts,
             commands::start_study_session,
+            commands::unfinished_sessions,
+            commands::resume_study_session,
             commands::finish_study_session,
             commands::mark_topic_read,
         ])

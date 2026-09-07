@@ -55,6 +55,9 @@ enum Command {
         subject: String,
         #[arg(long, default_value_t = 3)]
         size: usize,
+        /// Study these topic ids instead of what the scheduler would serve.
+        #[arg(short, long = "topic")]
+        topics: Vec<String>,
     },
     /// Grade a session started with `session`, from a JSON file of answers.
     ///
@@ -125,8 +128,13 @@ async fn main() -> Result<()> {
                 eprintln!("  ! {error}");
             }
         }
-        Command::Session { subject, size } => {
-            let plan = generate::start_session(&vault, &subject, size).await?;
+        Command::Session {
+            subject,
+            size,
+            topics,
+        } => {
+            let chosen = (!topics.is_empty()).then_some(topics);
+            let plan = generate::start_session(&vault, &subject, size, chosen).await?;
             println!("session {} — {} topics", plan.id, plan.topics.len());
             for entry in &plan.topics {
                 println!(

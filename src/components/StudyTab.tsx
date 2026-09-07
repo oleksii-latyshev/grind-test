@@ -1,15 +1,29 @@
-import { useState } from "react";
-import { BookOpenCheck, CalendarClock, Flame, GraduationCap, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  BookOpenCheck,
+  CalendarClock,
+  Flame,
+  GraduationCap,
+  History,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { api, errorMessage } from "@/lib/api";
-import type { SessionPlan, SubjectDetail } from "@/lib/types";
+import { MAX_SESSION_TOPICS, STAGES, stageOf } from "@/lib/study";
+import type { SessionPlan, SessionSummary, SubjectDetail, Topic } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const SIZES = [2, 3, 5];
+
+type Mode = "auto" | "manual";
 
 interface Props {
   detail: SubjectDetail;
@@ -17,17 +31,36 @@ interface Props {
 }
 
 export function StudyTab({ detail, onSessionStart }: Props) {
+  const [mode, setMode] = useState<Mode>("auto");
   const [size, setSize] = useState(3);
+  const [chosen, setChosen] = useState<string[]>([]);
+  const [query, setQuery] = useState("");
   const [starting, setStarting] = useState(false);
+  const [unfinished, setUnfinished] = useState<SessionSummary | null>(null);
   const { study } = detail;
 
+  const withNotes = useMemo(() => new Set(detail.knowledge_topic_ids), [detail]);
+
+  useEffect(() => {
+    api
+      .unfinishedSessions(detail.subject.id)
+      .then((sessions) => setUnfinished(sessions[0] ?? null))
+      .catch(() => setUnfinished(null));
+  }, [detail.subject.id]);
+
   const ready = study.available > 0;
-  const nothingDue = ready && study.due_now === 0;
+  const atCap = chosen.length >= MAX_SESSION_TOPICS;
+  const canStart =
+    ready && !starting && (mode === "auto" ? study.due_now > 0 : chosen.length > 0);
 
   async function start() {
     setStarting(true);
     try {
-      onSessionStart(await api.startStudySession(detail.subject.id, size));
+      onSessionStart(
+        mode === "manual"
+          ? await api.startStudySession(detail.subject.id, chosen.length, chosen)
+          : await api.startStudySession(detail.subject.id, size),
+      );
     } catch (error) {
       toast.error(errorMessage(error));
     } finally {
@@ -35,8 +68,48 @@ export function StudyTab({ detail, onSessionStart }: Props) {
     }
   }
 
+  async function resume(session: SessionSummary) {
+    setStarting(true);
+    try {
+      onSessionStart(await api.resumeStudySession(detail.subject.id, session.id));
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  function toggle(topic: Topic, checked: boolean) {
+    setChosen((current) =>
+      checked
+        ? current.includes(topic.id) || current.length >= MAX_SESSION_TOPICS
+          ? current
+          : [...current, topic.id]
+        : current.filter((id) => id !== topic.id),
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {unfinished ? (
+        <Card className="border-chart-3/40">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="flex items-center gap-2 text-sm font-medium">
+                <History className="size-4 text-chart-3" />
+                Незавершена сесія
+              </p>
+              <p className="line-clamp-1 text-xs text-muted-foreground">
+                {unfinished.topic_titles.join(" · ")}
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => resume(unfinished)} disabled={starting}>
+              Продовжити
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -92,49 +165,188 @@ export function StudyTab({ detail, onSessionStart }: Props) {
             закріплюєте міні-квізом. Відповіді перевіряє розумна модель.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Тем за сесію
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {SIZES.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setSize(value)}
-                  aria-pressed={size === value}
-                  className={cn(
-                    "rounded-4xl border px-4 py-1.5 text-sm transition-colors",
-                    size === value
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-input bg-input/30 hover:bg-muted",
-                  )}
-                >
-                  {value}
-                </button>
-              ))}
-            </div>
+        <CardContent className="space-y-5">
+          <div className="flex flex-wrap gap-2">
+            <Segment active={mode === "auto"} onClick={() => setMode("auto")}>
+              Автоматично
+            </Segment>
+            <Segment active={mode === "manual"} onClick={() => setMode("manual")}>
+              Обрати теми
+            </Segment>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            <Button onClick={start} disabled={starting || !ready || nothingDue}>
+          {mode === "auto" ? (
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Тем за сесію
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {SIZES.map((value) => (
+                  <Segment key={value} active={size === value} onClick={() => setSize(value)}>
+                    {value}
+                  </Segment>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Спершу прострочені повторення, далі нові теми за порядком силабуса.
+              </p>
+            </div>
+          ) : (
+            <TopicPicker
+              detail={detail}
+              withNotes={withNotes}
+              chosen={chosen}
+              atCap={atCap}
+              query={query}
+              onQuery={setQuery}
+              onToggle={toggle}
+            />
+          )}
+
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+            <Button onClick={start} disabled={!canStart}>
               {starting ? <Loader2 className="size-4 animate-spin" /> : null}
-              Почати сесію
+              {mode === "manual" && chosen.length > 0
+                ? `Почати сесію (${chosen.length})`
+                : "Почати сесію"}
             </Button>
             {!ready ? (
               <p className="text-sm text-muted-foreground">
                 Спершу згенеруйте конспекти на вкладці «Теми».
               </p>
-            ) : nothingDue ? (
+            ) : mode === "auto" && study.due_now === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Усе опрацьовано — наступні повторення заплановані на потім.
+                Усе опрацьовано — або оберіть теми вручну, щоб повторити раніше.
+              </p>
+            ) : mode === "manual" && chosen.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Оберіть від однієї до {MAX_SESSION_TOPICS} тем.
               </p>
             ) : null}
           </div>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function TopicPicker({
+  detail,
+  withNotes,
+  chosen,
+  atCap,
+  query,
+  onQuery,
+  onToggle,
+}: {
+  detail: SubjectDetail;
+  withNotes: Set<string>;
+  chosen: string[];
+  atCap: boolean;
+  query: string;
+  onQuery: (value: string) => void;
+  onToggle: (topic: Topic, checked: boolean) => void;
+}) {
+  const needle = query.trim().toLowerCase();
+
+  const sections = detail.subject.sections
+    .map((section) => ({
+      title: section.title,
+      topics: section.topics.filter(
+        (topic) =>
+          withNotes.has(topic.id) &&
+          (needle === "" ||
+            topic.title.toLowerCase().includes(needle) ||
+            topic.id.toLowerCase().includes(needle)),
+      ),
+    }))
+    .filter((section) => section.topics.length > 0);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Input
+          value={query}
+          onChange={(event) => onQuery(event.target.value)}
+          placeholder="Пошук за темою…"
+          className="max-w-xs"
+        />
+        <p className="text-xs text-muted-foreground">
+          Обрано {chosen.length} з {MAX_SESSION_TOPICS}
+        </p>
+      </div>
+
+      <ScrollArea className="h-80 rounded-4xl border border-border">
+        {sections.length === 0 ? (
+          <p className="p-4 text-sm text-muted-foreground">Нічого не знайдено.</p>
+        ) : (
+          sections.map((section) => (
+            <div key={section.title}>
+              <p className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground backdrop-blur">
+                {section.title}
+              </p>
+              {section.topics.map((topic) => {
+                const checked = chosen.includes(topic.id);
+                const stage = stageOf(detail.topic_study[topic.id]);
+                return (
+                  <label
+                    key={topic.id}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 px-4 py-2.5 transition-colors hover:bg-muted/50",
+                      !checked && atCap && "cursor-not-allowed opacity-50",
+                    )}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      disabled={!checked && atCap}
+                      onCheckedChange={(value) => onToggle(topic, value === true)}
+                      className="mt-0.5"
+                    />
+                    <span className="min-w-0 flex-1 space-y-0.5">
+                      <span className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-mono text-[0.65rem]">
+                          {topic.id}
+                        </Badge>
+                        <span className={cn("text-[0.7rem]", STAGES[stage].className)}>
+                          {STAGES[stage].label}
+                        </span>
+                      </span>
+                      <span className="block text-sm leading-snug">{topic.title}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          ))
+        )}
+      </ScrollArea>
+    </div>
+  );
+}
+
+function Segment({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "rounded-4xl border px-4 py-1.5 text-sm transition-colors",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-input bg-input/30 hover:bg-muted",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 

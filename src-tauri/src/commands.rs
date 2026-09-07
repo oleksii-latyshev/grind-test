@@ -317,11 +317,31 @@ pub async fn start_study_session(
     app: tauri::AppHandle,
     subject_id: String,
     size: Option<usize>,
+    topic_ids: Option<Vec<String>>,
 ) -> CmdResult<SessionPlan> {
     let vault = app.state::<AppState>().vault();
-    generate::start_session(&vault, &subject_id, size.unwrap_or(3))
+    generate::start_session(&vault, &subject_id, size.unwrap_or(3), topic_ids)
         .await
         .map_err(fail)
+}
+
+/// Sessions that were started but never graded, newest first.
+#[tauri::command]
+pub fn unfinished_sessions(
+    state: State<'_, AppState>,
+    subject_id: String,
+) -> Vec<generate::SessionSummary> {
+    generate::list_unfinished(&state.vault(), &subject_id)
+}
+
+/// Reopen a session exactly as it was generated, rather than paying for a new one.
+#[tauri::command]
+pub fn resume_study_session(
+    state: State<'_, AppState>,
+    subject_id: String,
+    session_id: String,
+) -> CmdResult<SessionPlan> {
+    generate::load_session(&state.vault(), &subject_id, &session_id).map_err(fail)
 }
 
 #[tauri::command]

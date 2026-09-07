@@ -1,4 +1,4 @@
-import type { Stage } from "./types";
+import type { Stage, TopicStudy } from "./types";
 
 /** Ukrainian labels and colour roles for the study ladder, shared by every view. */
 export const STAGES: Record<Stage, { label: string; className: string }> = {
@@ -11,6 +11,18 @@ export const STAGES: Record<Stage, { label: string; className: string }> = {
 
 /** Mirrors REVIEW_INTERVALS_DAYS in `src-tauri/src/vault/study.rs`. */
 export const MAX_LEVEL = 6;
+
+/** Mirrors MAX_SESSION_TOPICS in `src-tauri/src/generate.rs`. */
+export const MAX_SESSION_TOPICS = 6;
+
+/** The ladder thresholds live in one place rather than in each view that renders a badge. */
+export function stageOf(entry: TopicStudy | undefined): Stage {
+  if (!entry) return "new";
+  if (entry.level === 0) return entry.read_count > 0 ? "reading" : "new";
+  if (entry.level <= 2) return "learning";
+  if (entry.level <= 4) return "review";
+  return "mastered";
+}
 
 export function formatDue(dueAt: string | null): string {
   if (!dueAt) return "—";
