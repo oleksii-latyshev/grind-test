@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "properties": {
+    "hint": { "type": "string" },
+    "related_concepts": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["hint", "related_concepts"]
+}

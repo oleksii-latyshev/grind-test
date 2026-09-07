@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "properties": {
+    "summary": { "type": "string" },
+    "markdown": { "type": "string" },
+    "key_terms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "term": { "type": "string" },
+          "definition": { "type": "string" }
+        },
+        "required": ["term", "definition"]
+      }
+    },
+    "exam_traps": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["summary", "markdown", "key_terms", "exam_traps"]
+}

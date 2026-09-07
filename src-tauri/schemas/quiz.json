@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "properties": {
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "topic_id": { "type": "string" },
+          "type": { "type": "string", "enum": ["single", "multi"] },
+          "question": { "type": "string" },
+          "options": { "type": "array", "items": { "type": "string" } },
+          "correct": { "type": "array", "items": { "type": "integer" } },
+          "explanation": { "type": "string" },
+          "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] }
+        },
+        "required": ["topic_id", "type", "question", "options", "correct", "explanation", "difficulty"]
+      }
+    }
+  },
+  "required": ["questions"]
+}
