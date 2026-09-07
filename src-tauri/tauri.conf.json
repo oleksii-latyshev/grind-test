@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "grind-test",
-        "width": 800,
-        "height": 600
+        "title": "grind-test — підготовка до екзаменів",
+        "width": 1200,
+        "height": 840,
+        "minWidth": 900,
+        "minHeight": 640
       }
     ],
     "security": {

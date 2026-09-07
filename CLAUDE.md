@@ -119,7 +119,8 @@ Tauri events (`generation://progress`). A crash or quit must never lose complete
 
 ## Conventions
 
-- Ukrainian text is the payload; identifiers, code and commit messages are English.
+- Ukrainian text is the payload; code, comments, identifiers, commit messages and every
+  documentation file (README.md, this file) are English.
 - Slugs: transliterate Cyrillic → ASCII, lowercase, `-`-separated, truncated to ~60 chars.
   Filenames are prefixed with a zero-padded index so directory order matches syllabus order.
 - Timestamps are RFC3339 UTC.
