@@ -70,7 +70,10 @@ pub fn resolve_binary() -> Result<PathBuf> {
         if path.is_file() {
             return Ok(path);
         }
-        bail!("GRIND_AGY_BIN points at {}, which is not a file", path.display());
+        bail!(
+            "GRIND_AGY_BIN points at {}, which is not a file",
+            path.display()
+        );
     }
 
     if let Some(paths) = std::env::var_os("PATH") {
@@ -152,10 +155,13 @@ async fn run_once<T: DeserializeOwned>(
         .with_context(|| format!("spawning {}", binary.display()))?;
 
     // The CLI has its own timeout; ours is the outer backstop in case it wedges.
-    let output = match tokio::time::timeout(timeout + Duration::from_secs(30), child.wait_with_output()).await {
-        Ok(result) => result.context("waiting for agy")?,
-        Err(_) => bail!("agy timed out after {:?}", timeout),
-    };
+    let output =
+        match tokio::time::timeout(timeout + Duration::from_secs(30), child.wait_with_output())
+            .await
+        {
+            Ok(result) => result.context("waiting for agy")?,
+            Err(_) => bail!("agy timed out after {:?}", timeout),
+        };
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     if !output.status.success() {

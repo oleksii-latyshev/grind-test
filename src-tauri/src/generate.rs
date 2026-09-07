@@ -66,7 +66,11 @@ impl KnowledgeDraft {
         if !self.key_terms.is_empty() {
             body.push_str("\n\n## Ключові терміни\n\n");
             for term in &self.key_terms {
-                body.push_str(&format!("- **{}** — {}\n", term.term.trim(), term.definition.trim()));
+                body.push_str(&format!(
+                    "- **{}** — {}\n",
+                    term.term.trim(),
+                    term.definition.trim()
+                ));
             }
         }
         if !self.exam_traps.is_empty() {
@@ -101,7 +105,11 @@ fn knowledge_prompt(subject: &Subject, topic: &Topic) -> String {
         .replace("{{TOPIC_TITLE}}", &topic.title)
         .replace(
             "{{SIBLING_TOPICS}}",
-            if siblings.is_empty() { "(none)" } else { &siblings },
+            if siblings.is_empty() {
+                "(none)"
+            } else {
+                &siblings
+            },
         )
 }
 
@@ -132,11 +140,31 @@ pub async fn knowledge_for_topic(
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum GenerationEvent {
-    Started { subject: String, total: usize, skipped: usize },
-    TopicStarted { topic_id: String, title: String },
-    TopicDone { topic_id: String, title: String, done: usize, total: usize },
-    TopicFailed { topic_id: String, title: String, error: String },
-    Finished { generated: usize, failed: usize, total_tokens: u64 },
+    Started {
+        subject: String,
+        total: usize,
+        skipped: usize,
+    },
+    TopicStarted {
+        topic_id: String,
+        title: String,
+    },
+    TopicDone {
+        topic_id: String,
+        title: String,
+        done: usize,
+        total: usize,
+    },
+    TopicFailed {
+        topic_id: String,
+        title: String,
+        error: String,
+    },
+    Finished {
+        generated: usize,
+        failed: usize,
+        total_tokens: u64,
+    },
 }
 
 pub type EventSink = Arc<dyn Fn(GenerationEvent) + Send + Sync>;
@@ -190,42 +218,43 @@ pub async fn knowledge_batch(
     let subject = Arc::new(subject);
     let done = Arc::new(std::sync::atomic::AtomicUsize::new(0));
 
-    let results: Vec<Result<u64, (Topic, String)>> = stream::iter(pending.into_iter().map(|topic| {
-        let subject = Arc::clone(&subject);
-        let on_event = Arc::clone(&on_event);
-        let done = Arc::clone(&done);
-        let vault = vault.clone();
-        async move {
-            on_event(GenerationEvent::TopicStarted {
-                topic_id: topic.id.clone(),
-                title: topic.title.clone(),
-            });
-            match knowledge_for_topic(&vault, &subject, &topic).await {
-                Ok((_, usage)) => {
-                    let position = done.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
-                    on_event(GenerationEvent::TopicDone {
-                        topic_id: topic.id.clone(),
-                        title: topic.title.clone(),
-                        done: position,
-                        total,
-                    });
-                    Ok(usage.total_tokens)
-                }
-                Err(error) => {
-                    let message = format!("{error:#}");
-                    on_event(GenerationEvent::TopicFailed {
-                        topic_id: topic.id.clone(),
-                        title: topic.title.clone(),
-                        error: message.clone(),
-                    });
-                    Err((topic, message))
+    let results: Vec<Result<u64, (Topic, String)>> =
+        stream::iter(pending.into_iter().map(|topic| {
+            let subject = Arc::clone(&subject);
+            let on_event = Arc::clone(&on_event);
+            let done = Arc::clone(&done);
+            let vault = vault.clone();
+            async move {
+                on_event(GenerationEvent::TopicStarted {
+                    topic_id: topic.id.clone(),
+                    title: topic.title.clone(),
+                });
+                match knowledge_for_topic(&vault, &subject, &topic).await {
+                    Ok((_, usage)) => {
+                        let position = done.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+                        on_event(GenerationEvent::TopicDone {
+                            topic_id: topic.id.clone(),
+                            title: topic.title.clone(),
+                            done: position,
+                            total,
+                        });
+                        Ok(usage.total_tokens)
+                    }
+                    Err(error) => {
+                        let message = format!("{error:#}");
+                        on_event(GenerationEvent::TopicFailed {
+                            topic_id: topic.id.clone(),
+                            title: topic.title.clone(),
+                            error: message.clone(),
+                        });
+                        Err((topic, message))
+                    }
                 }
             }
-        }
-    }))
-    .buffer_unordered(concurrency.max(1))
-    .collect()
-    .await;
+        }))
+        .buffer_unordered(concurrency.max(1))
+        .collect()
+        .await;
 
     let mut report = KnowledgeBatchReport {
         generated: 0,
@@ -320,7 +349,10 @@ pub async fn quiz(vault: &Vault, request: QuizRequest) -> Result<Quiz> {
         _ => all.clone(),
     };
     if candidates.is_empty() {
-        bail!("no topics matched the selection for subject '{}'", request.subject);
+        bail!(
+            "no topics matched the selection for subject '{}'",
+            request.subject
+        );
     }
 
     // Only topics with a knowledge note can be quizzed — questions must be grounded.
@@ -405,7 +437,11 @@ pub async fn quiz(vault: &Vault, request: QuizRequest) -> Result<Quiz> {
 
     let now = chrono::Utc::now();
     let quiz = Quiz {
-        id: format!("{}-{}", now.format("%Y%m%d-%H%M%S"), &uuid::Uuid::new_v4().to_string()[..8]),
+        id: format!(
+            "{}-{}",
+            now.format("%Y%m%d-%H%M%S"),
+            &uuid::Uuid::new_v4().to_string()[..8]
+        ),
         subject: request.subject.clone(),
         title: format!("{} — {} питань", subject.title, questions.len()),
         created_at: now.to_rfc3339(),
@@ -454,7 +490,11 @@ fn sanitize_questions(drafts: Vec<QuestionDraft>, topic_ids: &[String]) -> Vec<Q
             },
             kind,
             question: draft.question.trim().to_string(),
-            options: draft.options.into_iter().map(|o| o.trim().to_string()).collect(),
+            options: draft
+                .options
+                .into_iter()
+                .map(|o| o.trim().to_string())
+                .collect(),
             correct,
             explanation: draft.explanation.trim().to_string(),
             difficulty: draft.difficulty.into(),
@@ -474,7 +514,12 @@ pub struct Hint {
     pub related_concepts: Vec<String>,
 }
 
-pub async fn hint(vault: &Vault, subject_id: &str, quiz_id: &str, question_id: &str) -> Result<Hint> {
+pub async fn hint(
+    vault: &Vault,
+    subject_id: &str,
+    quiz_id: &str,
+    question_id: &str,
+) -> Result<Hint> {
     let quiz = quiz::read(vault, subject_id, quiz_id)?;
     let question = quiz
         .questions
@@ -553,10 +598,10 @@ mod tests {
         let kept = sanitize_questions(
             vec![
                 draft(vec!["a", "b", "c", "d"], vec![1]),
-                draft(vec!["a", "b", "c", "d"], vec![]),          // no correct option
+                draft(vec!["a", "b", "c", "d"], vec![]), // no correct option
                 draft(vec!["a", "b", "c", "d"], vec![0, 1, 2, 3]), // every option correct
-                draft(vec!["a"], vec![0]),                         // not a choice
-                draft(vec!["a", "b", "c", "d"], vec![9]),          // out of range
+                draft(vec!["a"], vec![0]),               // not a choice
+                draft(vec!["a", "b", "c", "d"], vec![9]), // out of range
             ],
             &topics,
         );
@@ -638,9 +683,7 @@ pub async fn start_session(vault: &Vault, subject_id: &str, size: usize) -> Resu
         .filter(|topic| knowledge::exists(vault, topic))
         .collect();
     if studiable.is_empty() {
-        bail!(
-            "no knowledge notes exist for '{subject_id}' yet — generate them before studying"
-        );
+        bail!("no knowledge notes exist for '{subject_id}' yet — generate them before studying");
     }
 
     let planned = study::plan_session(&state, &studiable, size.clamp(1, 6));
@@ -784,7 +827,10 @@ pub async fn finish_session(
         .quiz
         .iter()
         .map(|question| {
-            let selected = quiz_selections.get(&question.id).cloned().unwrap_or_default();
+            let selected = quiz_selections
+                .get(&question.id)
+                .cloned()
+                .unwrap_or_default();
             progress::AnswerRecord {
                 question_id: question.id.clone(),
                 topic_id: question.topic_id.clone(),
@@ -899,9 +945,13 @@ async fn grade_open(
     }
 
     let prompt = GRADE_OPEN_PROMPT.replace("{{ANSWERS}}", &block);
-    let response =
-        agy::run::<GradingDraft>(&prompt, ModelTier::Smart, GRADE_OPEN_SCHEMA, KNOWLEDGE_TIMEOUT)
-            .await?;
+    let response = agy::run::<GradingDraft>(
+        &prompt,
+        ModelTier::Smart,
+        GRADE_OPEN_SCHEMA,
+        KNOWLEDGE_TIMEOUT,
+    )
+    .await?;
 
     Ok(response
         .data
@@ -945,7 +995,7 @@ pub fn load_session(vault: &Vault, subject_id: &str, session_id: &str) -> Result
     let path = session_path(vault, subject_id, session_id);
     let raw = std::fs::read_to_string(&path)
         .with_context(|| format!("reading session {}", path.display()))?;
-    let stored: StoredSession =
-        serde_json::from_str(&raw).with_context(|| format!("parsing session {}", path.display()))?;
+    let stored: StoredSession = serde_json::from_str(&raw)
+        .with_context(|| format!("parsing session {}", path.display()))?;
     Ok(stored.plan)
 }

@@ -1,0 +1,94 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same branch makes the running build irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      # `bun run build` is `tsc && vite build`, so this is the type check too. It needs no
+      # Rust toolchain, which makes it the fastest signal on a broken commit.
+      - run: bun run build
+
+  app:
+    name: ${{ matrix.label }}
+    needs: frontend
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: macOS (Apple Silicon)
+            os: macos-latest
+            rust-target: aarch64-apple-darwin
+            artifact: grind-test-macos-arm64
+          - label: macOS (Intel)
+            os: macos-13
+            rust-target: x86_64-apple-darwin
+            artifact: grind-test-macos-x64
+          - label: Windows
+            os: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+            artifact: grind-test-windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: bun install --frozen-lockfile
+
+      - name: Rust tests
+        working-directory: src-tauri
+        run: cargo test --lib
+
+      - name: Build the app
+        run: bun run tauri build --target ${{ matrix.rust-target }}
+
+      # `upload-artifact` does not preserve the executable bit, which would leave the
+      # unpacked .app unable to launch. `ditto` produces the same archive format the App
+      # Store tooling uses and keeps the bundle intact.
+      - name: Pack the macOS app
+        if: runner.os == 'macOS'
+        run: |
+          ditto -c -k --keepParent \
+            "src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos/grind-test.app" \
+            "${{ matrix.artifact }}.zip"
+
+      - name: Upload macOS build
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.zip
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload Windows installer
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: src-tauri/target/${{ matrix.rust-target }}/release/bundle/nsis/*-setup.exe
+          retention-days: 14
+          if-no-files-found: error

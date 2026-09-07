@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
-use std::sync::Arc;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
 use tauri::{Emitter, Manager, State};
@@ -12,13 +13,42 @@ use crate::vault::progress::{self, Attempt, AttemptResult, SubjectStats};
 use crate::vault::quiz::{self, Quiz, QuizSummary};
 use crate::vault::study::{self, StudyOverview, TopicStudy};
 use crate::vault::syllabus::{self, Subject, Topic};
+use crate::vault::paths;
 use crate::vault::Vault;
 
 /// Progress events for a running knowledge batch.
 pub const GENERATION_EVENT: &str = "generation://progress";
 
 pub struct AppState {
-    pub vault: Vault,
+    /// Swappable at runtime: the user can point the app at a different folder without
+    /// restarting it.
+    vault: Mutex<Vault>,
+    config_dir: PathBuf,
+}
+
+impl AppState {
+    pub fn new(vault: Vault, config_dir: PathBuf) -> Self {
+        Self {
+            vault: Mutex::new(vault),
+            config_dir,
+        }
+    }
+
+    /// A lock poisoned by a panic elsewhere should not take the whole app down — the value
+    /// behind it is just a path.
+    pub fn vault(&self) -> Vault {
+        self.vault
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone()
+    }
+
+    fn replace_vault(&self, root: PathBuf) {
+        *self
+            .vault
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Vault::new(root);
+    }
 }
 
 type CmdResult<T> = Result<T, String>;
@@ -52,8 +82,28 @@ pub struct SubjectDetail {
 #[derive(Debug, Serialize)]
 pub struct VaultInfo {
     pub root: String,
-    pub exists: bool,
+    /// The app can actually list the syllabus directory right now.
+    pub readable: bool,
+    pub subject_count: usize,
+    /// Why it is not readable, phrased for the user.
+    pub error: Option<String>,
     pub agy_binary: Option<String>,
+}
+
+fn describe(vault: &Vault) -> VaultInfo {
+    let (readable, subject_count, error) = match paths::describe_vault(&vault.root) {
+        Ok(count) => (true, count, None),
+        Err(message) => (false, 0, Some(message)),
+    };
+    VaultInfo {
+        root: vault.root.to_string_lossy().to_string(),
+        readable,
+        subject_count,
+        error,
+        agy_binary: crate::agy::resolve_binary()
+            .ok()
+            .map(|path| path.to_string_lossy().to_string()),
+    }
 }
 
 fn knowledge_ids(vault: &Vault, topics: &[&Topic]) -> Vec<String> {
@@ -66,18 +116,48 @@ fn knowledge_ids(vault: &Vault, topics: &[&Topic]) -> Vec<String> {
 
 #[tauri::command]
 pub fn vault_info(state: State<'_, AppState>) -> VaultInfo {
-    VaultInfo {
-        root: state.vault.root.to_string_lossy().to_string(),
-        exists: state.vault.syllabus_dir().is_dir(),
-        agy_binary: crate::agy::resolve_binary()
-            .ok()
-            .map(|p| p.to_string_lossy().to_string()),
-    }
+    describe(&state.vault())
+}
+
+/// Let the user point the app at the vault through the system folder picker.
+///
+/// Beyond being the obvious way to move a vault, on macOS this is also the way *back* from a
+/// denied folder-access prompt: choosing a folder in the system panel is an explicit grant,
+/// so the user can see exactly what they are allowing.
+#[tauri::command]
+pub async fn choose_vault(app: tauri::AppHandle) -> CmdResult<VaultInfo> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .set_title("Оберіть теку сховища")
+        .pick_folder(move |picked| {
+            let _ = tx.send(picked);
+        });
+
+    let picked = rx.await.map_err(|_| "вікно вибору теки закрилося".to_string())?;
+    let state = app.state::<AppState>();
+    let Some(picked) = picked else {
+        // Cancelled: report what is configured now rather than treating it as an error.
+        return Ok(describe(&state.vault()));
+    };
+
+    let path = picked.into_path().map_err(|error| error.to_string())?;
+    let root = paths::normalise_vault_choice(&path);
+
+    let mut config = crate::config::load(&state.config_dir);
+    config.vault_root = Some(root.clone());
+    crate::config::save(&state.config_dir, &config).map_err(fail)?;
+    state.replace_vault(root);
+
+    Ok(describe(&state.vault()))
 }
 
 #[tauri::command]
 pub fn list_subjects(state: State<'_, AppState>) -> CmdResult<Vec<SubjectOverview>> {
-    let vault = &state.vault;
+    let vault = state.vault();
+    let vault = &vault;
     let subjects = syllabus::load_all(vault).map_err(fail)?;
     let mastery = progress::load_mastery(vault);
 
@@ -101,7 +181,8 @@ pub fn list_subjects(state: State<'_, AppState>) -> CmdResult<Vec<SubjectOvervie
 
 #[tauri::command]
 pub fn get_subject(state: State<'_, AppState>, subject_id: String) -> CmdResult<SubjectDetail> {
-    let vault = &state.vault;
+    let vault = state.vault();
+    let vault = &vault;
     let subject = syllabus::load(vault, &subject_id).map_err(fail)?;
     let topics: Vec<&Topic> = subject.topics().collect();
     let ids = knowledge_ids(vault, &topics);
@@ -143,7 +224,8 @@ pub fn get_knowledge(
     subject_id: String,
     topic_id: String,
 ) -> CmdResult<Option<KnowledgeNote>> {
-    let vault = &state.vault;
+    let vault = state.vault();
+    let vault = &vault;
     let subject = syllabus::load(vault, &subject_id).map_err(fail)?;
     let Some(topic) = subject.find_topic(&topic_id) else {
         return Err(format!("unknown topic '{topic_id}'"));
@@ -159,7 +241,7 @@ pub async fn generate_knowledge(
     force: Option<bool>,
     concurrency: Option<usize>,
 ) -> CmdResult<KnowledgeBatchReport> {
-    let vault = app.state::<AppState>().vault.clone();
+    let vault = app.state::<AppState>().vault();
     let emitter = app.clone();
     let sink: generate::EventSink = Arc::new(move |event: GenerationEvent| {
         let _ = emitter.emit(GENERATION_EVENT, event);
@@ -179,18 +261,22 @@ pub async fn generate_knowledge(
 
 #[tauri::command]
 pub async fn generate_quiz(app: tauri::AppHandle, request: QuizRequest) -> CmdResult<Quiz> {
-    let vault = app.state::<AppState>().vault.clone();
+    let vault = app.state::<AppState>().vault();
     generate::quiz(&vault, request).await.map_err(fail)
 }
 
 #[tauri::command]
 pub fn list_quizzes(state: State<'_, AppState>, subject_id: String) -> CmdResult<Vec<QuizSummary>> {
-    quiz::list(&state.vault, &subject_id).map_err(fail)
+    quiz::list(&state.vault(), &subject_id).map_err(fail)
 }
 
 #[tauri::command]
-pub fn get_quiz(state: State<'_, AppState>, subject_id: String, quiz_id: String) -> CmdResult<Quiz> {
-    quiz::read(&state.vault, &subject_id, &quiz_id).map_err(fail)
+pub fn get_quiz(
+    state: State<'_, AppState>,
+    subject_id: String,
+    quiz_id: String,
+) -> CmdResult<Quiz> {
+    quiz::read(&state.vault(), &subject_id, &quiz_id).map_err(fail)
 }
 
 #[tauri::command]
@@ -201,7 +287,7 @@ pub fn submit_quiz(
     selections: BTreeMap<String, Vec<usize>>,
     hints_used: Vec<String>,
 ) -> CmdResult<AttemptResult> {
-    generate::grade(&state.vault, &subject_id, &quiz_id, selections, hints_used).map_err(fail)
+    generate::grade(&state.vault(), &subject_id, &quiz_id, selections, hints_used).map_err(fail)
 }
 
 #[tauri::command]
@@ -211,7 +297,7 @@ pub async fn get_hint(
     quiz_id: String,
     question_id: String,
 ) -> CmdResult<Hint> {
-    let vault = app.state::<AppState>().vault.clone();
+    let vault = app.state::<AppState>().vault();
     generate::hint(&vault, &subject_id, &quiz_id, &question_id)
         .await
         .map_err(fail)
@@ -219,7 +305,7 @@ pub async fn get_hint(
 
 #[tauri::command]
 pub fn list_attempts(state: State<'_, AppState>, subject_id: Option<String>) -> Vec<Attempt> {
-    progress::list_attempts(&state.vault, subject_id.as_deref())
+    progress::list_attempts(&state.vault(), subject_id.as_deref())
 }
 
 // ---------------------------------------------------------------------------
@@ -232,7 +318,7 @@ pub async fn start_study_session(
     subject_id: String,
     size: Option<usize>,
 ) -> CmdResult<SessionPlan> {
-    let vault = app.state::<AppState>().vault.clone();
+    let vault = app.state::<AppState>().vault();
     generate::start_session(&vault, &subject_id, size.unwrap_or(3))
         .await
         .map_err(fail)
@@ -246,7 +332,7 @@ pub async fn finish_study_session(
     open_answers: BTreeMap<String, String>,
     quiz_selections: BTreeMap<String, Vec<usize>>,
 ) -> CmdResult<SessionResult> {
-    let vault = app.state::<AppState>().vault.clone();
+    let vault = app.state::<AppState>().vault();
     generate::finish_session(
         &vault,
         &session_id,
@@ -262,5 +348,5 @@ pub async fn finish_study_session(
 /// been tested on is visibly distinct from one they have never touched.
 #[tauri::command]
 pub fn mark_topic_read(state: State<'_, AppState>, topic_id: String) -> CmdResult<()> {
-    study::mark_read(&state.vault, &topic_id).map_err(fail)
+    study::mark_read(&state.vault(), &topic_id).map_err(fail)
 }

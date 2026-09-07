@@ -100,7 +100,7 @@ impl From<DifficultyArg> for Difficulty {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-    let vault = Vault::new(resolve_vault_root(None));
+    let vault = Vault::new(resolve_vault_root(None, None));
 
     match cli.command {
         Command::Status => status(&vault)?,
@@ -114,15 +114,9 @@ async fn main() -> Result<()> {
         } => {
             let selection = resolve_selection(&vault, &subject, topics, limit, force)?;
             let sink: generate::EventSink = Arc::new(|event| print_event(&event));
-            let report = generate::knowledge_batch(
-                &vault,
-                &subject,
-                selection,
-                force,
-                concurrency,
-                sink,
-            )
-            .await?;
+            let report =
+                generate::knowledge_batch(&vault, &subject, selection, force, concurrency, sink)
+                    .await?;
             println!(
                 "\ndone: {} generated, {} skipped, {} failed, ~{} tokens",
                 report.generated, report.skipped, report.failed, report.total_tokens
@@ -151,7 +145,11 @@ async fn main() -> Result<()> {
             for question in &plan.quiz {
                 println!("\n[{}] {}", question.topic_id, question.question);
                 for (index, option) in question.options.iter().enumerate() {
-                    let mark = if question.correct.contains(&index) { "*" } else { " " };
+                    let mark = if question.correct.contains(&index) {
+                        "*"
+                    } else {
+                        " "
+                    };
                     println!("  {mark} {}. {option}", index + 1);
                 }
             }
@@ -191,7 +189,10 @@ async fn main() -> Result<()> {
                 );
             }
             for grading in &result.gradings {
-                println!("\n[{}] {}%\n  {}", grading.topic_id, grading.score, grading.verdict);
+                println!(
+                    "\n[{}] {}%\n  {}",
+                    grading.topic_id, grading.score, grading.verdict
+                );
                 for point in &grading.missed {
                     println!("  – пропущено: {point}");
                 }
@@ -216,7 +217,11 @@ async fn main() -> Result<()> {
             for question in &quiz.questions {
                 println!("\n[{}] {}", question.topic_id, question.question);
                 for (index, option) in question.options.iter().enumerate() {
-                    let mark = if question.correct.contains(&index) { "*" } else { " " };
+                    let mark = if question.correct.contains(&index) {
+                        "*"
+                    } else {
+                        " "
+                    };
                     println!("  {mark} {}. {option}", index + 1);
                 }
             }
@@ -234,7 +239,11 @@ fn resolve_selection(
     force: bool,
 ) -> Result<Option<Vec<String>>> {
     if limit.is_none() {
-        return Ok(if topics.is_empty() { None } else { Some(topics) });
+        return Ok(if topics.is_empty() {
+            None
+        } else {
+            Some(topics)
+        });
     }
     let subject = syllabus::load(vault, subject_id)?;
     let selected: Vec<String> = subject
@@ -249,14 +258,25 @@ fn resolve_selection(
 
 fn print_event(event: &GenerationEvent) {
     match event {
-        GenerationEvent::Started { subject, total, skipped } => {
+        GenerationEvent::Started {
+            subject,
+            total,
+            skipped,
+        } => {
             println!("{subject}: generating {total} notes ({skipped} already present)");
         }
         GenerationEvent::TopicStarted { topic_id, .. } => println!("  → {topic_id}"),
-        GenerationEvent::TopicDone { topic_id, done, total, .. } => {
+        GenerationEvent::TopicDone {
+            topic_id,
+            done,
+            total,
+            ..
+        } => {
             println!("  ✓ {topic_id}  [{done}/{total}]");
         }
-        GenerationEvent::TopicFailed { topic_id, error, .. } => {
+        GenerationEvent::TopicFailed {
+            topic_id, error, ..
+        } => {
             eprintln!("  ✗ {topic_id}: {error}");
         }
         GenerationEvent::Finished { .. } => {}
@@ -273,7 +293,10 @@ fn status(vault: &Vault) -> Result<()> {
     println!();
     for subject in syllabus::load_all(vault)? {
         let topics: Vec<_> = subject.topics().collect();
-        let with_knowledge = topics.iter().filter(|t| knowledge::exists(vault, t)).count();
+        let with_knowledge = topics
+            .iter()
+            .filter(|t| knowledge::exists(vault, t))
+            .count();
         let stats = progress::subject_stats(&mastery, &subject.id, &topics, with_knowledge);
         println!(
             "{:<4} {:>3} topics  {:>3} notes  {:>3} quizzes  {:>3}% accuracy",
@@ -296,7 +319,12 @@ fn topics(vault: &Vault, subject_id: &str, missing_only: bool) -> Result<()> {
             if missing_only && has {
                 continue;
             }
-            println!("{} {:<10} {}", if has { "✓" } else { " " }, topic.id, topic.title);
+            println!(
+                "{} {:<10} {}",
+                if has { "✓" } else { " " },
+                topic.id,
+                topic.title
+            );
         }
     }
     Ok(())

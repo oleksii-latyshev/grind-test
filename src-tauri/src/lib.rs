@@ -1,5 +1,6 @@
 pub mod agy;
 pub mod commands;
+pub mod config;
 pub mod generate;
 pub mod vault;
 
@@ -8,23 +9,24 @@ use vault::paths::{resolve_vault_root, Vault};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             use tauri::Manager;
-            // Packaged builds have no repo next to them, so fall back to the app data dir.
-            let fallback = app
+            let config_dir = app
                 .path()
-                .app_data_dir()
-                .ok()
-                .map(|dir| dir.join("vault"));
-            let root = resolve_vault_root(fallback);
-            app.manage(commands::AppState {
-                vault: Vault::new(root),
-            });
+                .app_config_dir()
+                .unwrap_or_else(|_| std::path::PathBuf::from("."));
+            let chosen = config::load(&config_dir).vault_root;
+            // Packaged builds have no repo next to them, so fall back to the app data dir.
+            let fallback = app.path().app_data_dir().ok().map(|dir| dir.join("vault"));
+            let root = resolve_vault_root(chosen, fallback);
+            app.manage(commands::AppState::new(Vault::new(root), config_dir));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::vault_info,
+            commands::choose_vault,
             commands::list_subjects,
             commands::get_subject,
             commands::get_knowledge,

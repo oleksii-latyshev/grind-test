@@ -77,6 +77,7 @@ Layout:
 | Path | Responsibility |
 |---|---|
 | `src-tauri/src/vault/paths.rs` | resolve vault root, subject/topic paths, slugs |
+| `src-tauri/src/config.rs` | persisted settings (the chosen vault folder) |
 | `src-tauri/src/vault/syllabus.rs` | parse `vault/syllabus/*.md` → subjects/sections/topics |
 | `src-tauri/src/vault/knowledge.rs` | read/write knowledge notes + frontmatter |
 | `src-tauri/src/vault/quiz.rs` | quiz model, read/write `vault/quizzes/` |
@@ -121,8 +122,13 @@ agy -p "<prompt>" --model <id> --output-format json --json-schema <path> --print
 `vault/` is **gitignored** — it holds the user's personal exam material and results. Never
 commit it, never assume a file in it exists, always degrade gracefully when it is empty.
 
-Vault root resolution: `$GRIND_VAULT` → path stored in app config → `<repo>/vault` (dev) →
-app data dir (packaged).
+Vault root resolution: `$GRIND_VAULT` → the folder the user picked (stored in the OS config
+dir, which is never permission-gated) → `<repo>/vault` (dev) → app data dir (packaged).
+
+`AppState` holds the vault behind a `Mutex` because `choose_vault` swaps it at runtime; read
+it through `state.vault()`, never a stored copy. When file access fails, report *why* —
+`paths::describe_vault` separates a denied macOS permission from a wrong folder, and the UI
+depends on that distinction. Never let a permission error surface as an empty subject list.
 
 Subjects are the syllabus filenames: `f2`, `f3`, `f7` (242 topics total). A topic id is
 `<subject>/<section-index>.<topic-index>`, e.g. `f3/2.7`.
@@ -152,6 +158,10 @@ Tauri events (`generation://progress`). A crash or quit must never lose complete
   and keep the mirrored TS types in `src/lib/types.ts` in sync by hand.
 
 ## Commands
+
+`bundle.targets` in `tauri.conf.json` must stay a cross-platform list (`app` + `nsis`). Tauri
+filters it to the host platform, so one value serves both macOS and Windows CI legs. Do not
+add `dmg`: its bundler needs Finder automation and fails in a non-interactive shell.
 
 ```bash
 bun run dev            # vite only

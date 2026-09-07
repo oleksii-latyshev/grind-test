@@ -39,6 +39,22 @@ bun run tauri dev
 ```
 
 Requires `agy` on your `PATH` (or its path in the `GRIND_AGY_BIN` environment variable).
+A packaged macOS app does not inherit the shell `PATH`, so it falls back to
+`~/.local/bin/agy` and the Homebrew prefixes.
+
+To build the installable app:
+
+```bash
+bun run tauri build   # → src-tauri/target/release/bundle/macos/grind-test.app
+```
+
+Bundle targets are `app` + `nsis`; Tauri builds only the ones that apply to the host, so
+macOS produces the `.app` and Windows the installer. The `.dmg` target is deliberately absent
+— its bundler drives Finder over AppleScript and fails without automation permission, and a
+locally installed app does not need a disk image.
+
+Note that the dev-time vault path is baked in at compile time, so a build made from this
+checkout keeps reading the `vault/` beside it. Move the repository and you have to rebuild.
 
 ## CLI for bulk jobs
 
@@ -57,7 +73,36 @@ interrupted run can simply be started again.
 
 ## The vault
 
-`vault/` is gitignored — it holds personal exam material and results. It is located via
-`$GRIND_VAULT`, then a `vault/` directory next to the repository, then the app data dir.
+`vault/` is gitignored — it holds personal exam material and results.
+
+The app resolves it in this order: `$GRIND_VAULT`, then the folder you picked inside the app,
+then a `vault/` directory next to the repository, then the app data dir. The choice is stored
+in the OS config directory, which is never gated behind file-access permission, so the app
+can always remember where the vault is even when it cannot currently read it.
+
+Use **Обрати теку сховища** on the subjects screen to point the app somewhere else. On macOS
+this is also the way back from a declined folder-access prompt: choosing a folder in the
+system panel is an explicit grant.
 
 Architecture details live in [CLAUDE.md](CLAUDE.md).
+
+## CI
+
+`.github/workflows/build.yml` runs on every push to `main`, on pull requests, and on demand.
+A fast `typecheck` job (`tsc` + `vite build`, no Rust) gates a build matrix that runs the Rust
+tests and then packages the app for macOS arm64, macOS x64 and Windows x64.
+
+Download a build from the run's **Artifacts** section:
+
+| Artifact | Contents |
+|---|---|
+| `grind-test-macos-arm64` | `.app`, zipped with `ditto` so the bundle stays executable |
+| `grind-test-macos-x64` | same, for Intel Macs |
+| `grind-test-windows-x64` | NSIS `*-setup.exe` |
+
+Builds are unsigned, so macOS shows an unidentified-developer warning on a downloaded build
+(right-click → Open, once). A CI build has no repository beside it, so it starts with an empty
+vault — point it at yours with **Обрати теку сховища**.
+
+For public distribution the usual next step is a tag-triggered job that uploads the same
+bundles to a GitHub Release; this workflow deliberately stops at artifacts.

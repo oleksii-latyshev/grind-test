@@ -17,38 +17,40 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
+  /* Warm paper rather than pure white: long reading sessions, not dashboards.
+     Body text lands at ~15:1 — crisp without the glare of #000 on #fff. */
+  --background: oklch(0.982 0.003 85);
+  --foreground: oklch(0.255 0.006 75);
+  --card: oklch(0.996 0.002 85);
+  --card-foreground: oklch(0.255 0.006 75);
+  --popover: oklch(0.996 0.002 85);
+  --popover-foreground: oklch(0.255 0.006 75);
   --primary: oklch(0.52 0.105 223.128);
   --primary-foreground: oklch(0.984 0.019 200.873);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
-  --chart-1: oklch(0.865 0.127 207.078);
-  --chart-2: oklch(0.715 0.143 215.221);
-  --chart-3: oklch(0.609 0.126 221.723);
-  --chart-4: oklch(0.52 0.105 223.128);
-  --chart-5: oklch(0.45 0.085 224.283);
+  --secondary: oklch(0.952 0.004 85);
+  --secondary-foreground: oklch(0.285 0.006 75);
+  --muted: oklch(0.952 0.004 85);
+  --muted-foreground: oklch(0.508 0.008 75);
+  --accent: oklch(0.94 0.005 85);
+  --accent-foreground: oklch(0.285 0.006 75);
+  --destructive: oklch(0.552 0.208 25.5);
+  --border: oklch(0.902 0.004 85);
+  --input: oklch(0.902 0.004 85);
+  --ring: oklch(0.68 0.03 220);
+  --chart-1: oklch(0.79 0.12 207.078);
+  --chart-2: oklch(0.66 0.135 215.221);
+  --chart-3: oklch(0.56 0.12 221.723);
+  --chart-4: oklch(0.48 0.1 223.128);
+  --chart-5: oklch(0.4 0.08 224.283);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.609 0.126 221.723);
+  --sidebar: oklch(0.968 0.003 85);
+  --sidebar-foreground: oklch(0.255 0.006 75);
+  --sidebar-primary: oklch(0.56 0.12 221.723);
   --sidebar-primary-foreground: oklch(0.984 0.019 200.873);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
+  --sidebar-accent: oklch(0.94 0.005 85);
+  --sidebar-accent-foreground: oklch(0.285 0.006 75);
+  --sidebar-border: oklch(0.902 0.004 85);
+  --sidebar-ring: oklch(0.68 0.03 220);
 }
 
 @theme inline {
@@ -95,37 +97,42 @@
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.45 0.085 224.283);
-  --primary-foreground: oklch(0.984 0.019 200.873);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Soft warm charcoal, not black. Body text sits at ~11.5:1 — above WCAG AAA, but far
+     enough below the 19:1 of #fafafa-on-#09090b that glyphs stop haloing during a
+     multi-hour reading session. Surfaces step up in lightness instead of using borders. */
+  --background: oklch(0.228 0.004 80);
+  --foreground: oklch(0.872 0.0024 80);
+  --card: oklch(0.262 0.004 80);
+  --card-foreground: oklch(0.872 0.0024 80);
+  --popover: oklch(0.276 0.004 80);
+  --popover-foreground: oklch(0.872 0.0024 80);
+  /* Light enough to read as text, so `text-primary` labels and icons stay legible;
+     the old value scored 2.74:1 against the background. */
+  --primary: oklch(0.72 0.093 218);
+  --primary-foreground: oklch(0.215 0.03 220);
+  --secondary: oklch(0.295 0.004 80);
+  --secondary-foreground: oklch(0.872 0.0024 80);
+  --muted: oklch(0.295 0.004 80);
+  --muted-foreground: oklch(0.672 0.006 80);
+  --accent: oklch(0.318 0.004 80);
+  --accent-foreground: oklch(0.872 0.0024 80);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
-  --chart-1: oklch(0.865 0.127 207.078);
-  --chart-2: oklch(0.715 0.143 215.221);
-  --chart-3: oklch(0.609 0.126 221.723);
-  --chart-4: oklch(0.52 0.105 223.128);
-  --chart-5: oklch(0.45 0.085 224.283);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.715 0.143 215.221);
-  --sidebar-primary-foreground: oklch(0.302 0.056 229.695);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 13%);
+  --ring: oklch(0.58 0.05 220);
+  --chart-1: oklch(0.82 0.1 207.078);
+  --chart-2: oklch(0.735 0.12 215);
+  --chart-3: oklch(0.68 0.11 222);
+  --chart-4: oklch(0.6 0.1 223.128);
+  --chart-5: oklch(0.52 0.09 224.283);
+  --sidebar: oklch(0.248 0.004 80);
+  --sidebar-foreground: oklch(0.872 0.0024 80);
+  --sidebar-primary: oklch(0.72 0.093 218);
+  --sidebar-primary-foreground: oklch(0.215 0.03 220);
+  --sidebar-accent: oklch(0.318 0.004 80);
+  --sidebar-accent-foreground: oklch(0.872 0.0024 80);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.58 0.05 220);
 }
 
 @layer base {
@@ -145,7 +152,9 @@
 /* Typography for generated knowledge notes and question explanations.
    Hand-rolled rather than @tailwindcss/typography: one container, few rules. */
 .prose-note {
-  @apply text-[0.95rem] leading-relaxed text-foreground;
+  @apply text-base text-foreground;
+  line-height: 1.75;
+  max-width: 68ch;
 }
 .prose-note > * + * {
   @apply mt-4;

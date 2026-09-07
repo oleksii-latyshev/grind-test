@@ -147,7 +147,11 @@ export interface KnowledgeBatchReport {
 
 export interface VaultInfo {
   root: string;
-  exists: boolean;
+  /** The app can list the syllabus directory right now. */
+  readable: boolean;
+  subject_count: number;
+  /** Why it is not readable, phrased for the user. */
+  error: string | null;
   agy_binary: string | null;
 }
 

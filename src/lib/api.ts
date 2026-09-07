@@ -23,6 +23,9 @@ const GENERATION_EVENT = "generation://progress";
 export const api = {
   vaultInfo: () => invoke<VaultInfo>("vault_info"),
 
+  /** Opens the system folder picker; resolves with the vault state afterwards. */
+  chooseVault: () => invoke<VaultInfo>("choose_vault"),
+
   listSubjects: () => invoke<SubjectOverview[]>("list_subjects"),
 
   getSubject: (subjectId: string) => invoke<SubjectDetail>("get_subject", { subjectId }),

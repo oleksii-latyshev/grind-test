@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
-import { ArrowRight, FolderOpen, TriangleAlert } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ArrowRight, FolderOpen, Loader2, TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
 
+import { VaultCard } from "@/components/VaultCard";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { api, errorMessage } from "@/lib/api";
 import type { SubjectOverview, VaultInfo } from "@/lib/types";
 
@@ -17,20 +19,45 @@ interface Props {
 export function SubjectsScreen({ onOpen }: Props) {
   const [subjects, setSubjects] = useState<SubjectOverview[] | null>(null);
   const [vault, setVault] = useState<VaultInfo | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [choosing, setChoosing] = useState(false);
+
+  const load = useCallback(async () => {
+    const info = await api.vaultInfo();
+    setVault(info);
+    if (!info.readable) {
+      // No point asking for subjects we cannot read; the vault card explains why.
+      setSubjects([]);
+      return;
+    }
+    try {
+      setSubjects(await api.listSubjects());
+    } catch (error) {
+      toast.error(errorMessage(error));
+      setSubjects([]);
+    }
+  }, []);
 
   useEffect(() => {
-    Promise.all([api.listSubjects(), api.vaultInfo()])
-      .then(([list, info]) => {
-        setSubjects(list);
-        setVault(info);
-      })
-      .catch((err) => {
-        setError(errorMessage(err));
-        // Otherwise the skeletons never resolve and the error is easy to miss.
-        setSubjects([]);
-      });
-  }, []);
+    load().catch((error) => toast.error(errorMessage(error)));
+  }, [load]);
+
+  async function chooseVault() {
+    setChoosing(true);
+    try {
+      const info = await api.chooseVault();
+      setVault(info);
+      if (info.readable) {
+        setSubjects(await api.listSubjects());
+        toast.success(`Сховище підключено: ${info.subject_count} предметів`);
+      } else if (info.error) {
+        toast.error(info.error);
+      }
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setChoosing(false);
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 p-8">
@@ -41,7 +68,11 @@ export function SubjectsScreen({ onOpen }: Props) {
         </p>
       </header>
 
-      {vault && !vault.agy_binary ? (
+      {vault && !vault.readable ? (
+        <VaultCard vault={vault} busy={choosing} onChoose={chooseVault} />
+      ) : null}
+
+      {vault?.readable && !vault.agy_binary ? (
         <Alert variant="destructive">
           <TriangleAlert />
           <AlertTitle>CLI `agy` не знайдено</AlertTitle>
@@ -52,25 +83,17 @@ export function SubjectsScreen({ onOpen }: Props) {
         </Alert>
       ) : null}
 
-      {error ? (
-        <Alert variant="destructive">
-          <TriangleAlert />
-          <AlertTitle>Не вдалося прочитати сховище</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
-
       {subjects === null ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <Skeleton className="h-44 w-full rounded-4xl" />
           <Skeleton className="h-44 w-full rounded-4xl" />
         </div>
-      ) : subjects.length === 0 ? (
+      ) : subjects.length === 0 && vault?.readable ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-12 text-center text-sm text-muted-foreground">
             <FolderOpen className="size-6" />
             <p>У сховищі немає жодного силабуса.</p>
-            <p className="font-mono text-xs">{vault?.root}/syllabus/*.md</p>
+            <p className="font-mono text-xs">{vault.root}/syllabus/*.md</p>
           </CardContent>
         </Card>
       ) : (
@@ -81,8 +104,14 @@ export function SubjectsScreen({ onOpen }: Props) {
         </div>
       )}
 
-      {vault ? (
-        <p className="font-mono text-xs text-muted-foreground">Сховище: {vault.root}</p>
+      {vault?.readable ? (
+        <footer className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+          <p className="font-mono text-xs text-muted-foreground">Сховище: {vault.root}</p>
+          <Button variant="ghost" size="sm" onClick={chooseVault} disabled={choosing}>
+            {choosing ? <Loader2 className="size-4 animate-spin" /> : null}
+            Змінити
+          </Button>
+        </footer>
       ) : null}
     </div>
   );
