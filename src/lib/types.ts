@@ -69,6 +69,9 @@ export interface SubjectDetail {
   knowledge_topic_ids: string[];
   quizzes: QuizSummary[];
   stats: SubjectStats;
+  study: StudyOverview;
+  /** Per-topic study state; a missing key means the topic was never studied. */
+  topic_study: Record<string, TopicStudy>;
 }
 
 export interface KnowledgeNote {
@@ -161,3 +164,85 @@ export type GenerationEvent =
   | { kind: "topic_done"; topic_id: string; title: string; done: number; total: number }
   | { kind: "topic_failed"; topic_id: string; title: string; error: string }
   | { kind: "finished"; generated: number; failed: number; total_tokens: number };
+
+/* ------------------------------------------------------------------ study */
+
+export type Stage = "new" | "reading" | "learning" | "review" | "mastered";
+
+export interface TopicStudy {
+  topic_id: string;
+  /** 0 = never studied; 1..6 index into the review ladder. */
+  level: number;
+  read_count: number;
+  sessions: number;
+  last_studied: string | null;
+  due_at: string | null;
+  last_score: number | null;
+}
+
+export interface StudyOverview {
+  subject: string;
+  available: number;
+  new: number;
+  learning: number;
+  review: number;
+  mastered: number;
+  due_now: number;
+  studied_today: number;
+  progress_percent: number;
+}
+
+export interface PlannedTopic {
+  topic: Topic;
+  stage: Stage;
+  level: number;
+  last_score: number | null;
+  is_review: boolean;
+}
+
+export interface OpenQuestion {
+  topic_id: string;
+  question: string;
+  /** The grading rubric: what a complete answer has to contain. */
+  expected_points: string[];
+}
+
+export interface SessionPlan {
+  id: string;
+  subject: string;
+  created_at: string;
+  topics: PlannedTopic[];
+  notes: KnowledgeNote[];
+  open_questions: OpenQuestion[];
+  quiz: Question[];
+}
+
+export interface OpenGrading {
+  topic_id: string;
+  score: number;
+  verdict: string;
+  covered: string[];
+  missed: string[];
+  correction: string;
+}
+
+export interface TopicOutcome {
+  topic_id: string;
+  title: string;
+  score: number;
+  open_score: number | null;
+  quiz_correct: number;
+  quiz_total: number;
+  level: number;
+  stage: Stage;
+  due_at: string | null;
+}
+
+export interface SessionResult {
+  session_id: string;
+  subject: string;
+  gradings: OpenGrading[];
+  answers: AnswerRecord[];
+  topics: TopicOutcome[];
+  overall_score: number;
+}

@@ -14,6 +14,7 @@ use crate::agy::{self, ModelTier};
 use crate::vault::knowledge::{self, KnowledgeNote};
 use crate::vault::progress;
 use crate::vault::quiz::{self, Difficulty, Question, QuestionKind, Quiz};
+use crate::vault::study;
 use crate::vault::syllabus::{self, Subject, Topic};
 use crate::vault::Vault;
 
@@ -578,4 +579,373 @@ mod tests {
         let kept = sanitize_questions(vec![d], &topics);
         assert_eq!(kept[0].topic_id, "f3/1.1");
     }
+}
+
+// ---------------------------------------------------------------------------
+// study sessions
+// ---------------------------------------------------------------------------
+
+const SESSION_PROMPT: &str = include_str!("../prompts/session.md");
+const GRADE_OPEN_PROMPT: &str = include_str!("../prompts/grade_open.md");
+const SESSION_SCHEMA: &str = include_str!("../schemas/session.json");
+const GRADE_OPEN_SCHEMA: &str = include_str!("../schemas/grade_open.json");
+
+/// Notes are quoted in full for a session: the questions must not test material the
+/// student was never shown.
+const SESSION_EXCERPT_CHARS: usize = 9000;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenQuestion {
+    pub topic_id: String,
+    pub question: String,
+    /// The grading rubric: what a complete answer has to contain.
+    pub expected_points: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SessionDraft {
+    open_questions: Vec<OpenQuestionDraft>,
+    quiz_questions: Vec<QuestionDraft>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenQuestionDraft {
+    topic_id: String,
+    question: String,
+    #[serde(default)]
+    expected_points: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionPlan {
+    pub id: String,
+    pub subject: String,
+    pub created_at: String,
+    pub topics: Vec<study::PlannedTopic>,
+    pub notes: Vec<KnowledgeNote>,
+    pub open_questions: Vec<OpenQuestion>,
+    pub quiz: Vec<Question>,
+}
+
+/// Build a session: pick topics, load their notes, and generate the open questions and the
+/// mini-quiz in a single fast-model call.
+pub async fn start_session(vault: &Vault, subject_id: &str, size: usize) -> Result<SessionPlan> {
+    let subject = syllabus::load(vault, subject_id)?;
+    let state = study::load(vault);
+
+    let studiable: Vec<&Topic> = subject
+        .topics()
+        .filter(|topic| knowledge::exists(vault, topic))
+        .collect();
+    if studiable.is_empty() {
+        bail!(
+            "no knowledge notes exist for '{subject_id}' yet — generate them before studying"
+        );
+    }
+
+    let planned = study::plan_session(&state, &studiable, size.clamp(1, 6));
+    if planned.is_empty() {
+        bail!("nothing is due right now — every topic in this subject is scheduled for later");
+    }
+
+    let mut notes = Vec::new();
+    let mut knowledge_block = String::new();
+    for entry in &planned {
+        let Some(note) = knowledge::read(vault, &entry.topic)? else {
+            continue;
+        };
+        knowledge_block.push_str(&format!(
+            "### topic_id: {}\nТема: {}\n\n{}\n\n",
+            entry.topic.id,
+            entry.topic.title,
+            truncate_chars(&note.body, SESSION_EXCERPT_CHARS)
+        ));
+        notes.push(note);
+    }
+    if notes.is_empty() {
+        bail!("could not load the knowledge notes for the planned topics");
+    }
+
+    let quiz_count = (notes.len() * 4).clamp(6, 20);
+    let prompt = SESSION_PROMPT
+        .replace("{{KNOWLEDGE}}", &knowledge_block)
+        .replace("{{QUIZ_COUNT}}", &quiz_count.to_string());
+
+    let response =
+        agy::run::<SessionDraft>(&prompt, ModelTier::Fast, SESSION_SCHEMA, QUIZ_TIMEOUT).await?;
+
+    let topic_ids: Vec<String> = notes.iter().map(|note| note.topic_id.clone()).collect();
+    let quiz = sanitize_questions(response.data.quiz_questions, &topic_ids);
+    if quiz.is_empty() {
+        bail!("the generator returned no usable quiz questions for this session");
+    }
+
+    // One open question per topic, in the order the student read them; anything the model
+    // invented for an unknown topic is dropped.
+    let open_questions: Vec<OpenQuestion> = topic_ids
+        .iter()
+        .filter_map(|topic_id| {
+            response
+                .data
+                .open_questions
+                .iter()
+                .find(|draft| &draft.topic_id == topic_id)
+                .map(|draft| OpenQuestion {
+                    topic_id: draft.topic_id.clone(),
+                    question: draft.question.trim().to_string(),
+                    expected_points: draft.expected_points.clone(),
+                })
+        })
+        .collect();
+
+    let now = chrono::Utc::now();
+    let plan = SessionPlan {
+        id: format!(
+            "{}-{}",
+            now.format("%Y%m%d-%H%M%S"),
+            &uuid::Uuid::new_v4().to_string()[..8]
+        ),
+        subject: subject_id.to_string(),
+        created_at: now.to_rfc3339(),
+        topics: planned
+            .into_iter()
+            .filter(|entry| topic_ids.contains(&entry.topic.id))
+            .collect(),
+        notes,
+        open_questions,
+        quiz,
+    };
+    save_session(vault, &plan, None)?;
+    Ok(plan)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenGrading {
+    pub topic_id: String,
+    pub score: u32,
+    pub verdict: String,
+    #[serde(default)]
+    pub covered: Vec<String>,
+    #[serde(default)]
+    pub missed: Vec<String>,
+    #[serde(default)]
+    pub correction: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GradingDraft {
+    gradings: Vec<OpenGrading>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TopicOutcome {
+    pub topic_id: String,
+    pub title: String,
+    pub score: u32,
+    pub open_score: Option<u32>,
+    pub quiz_correct: usize,
+    pub quiz_total: usize,
+    pub level: u8,
+    pub stage: study::Stage,
+    pub due_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionResult {
+    pub session_id: String,
+    pub subject: String,
+    pub gradings: Vec<OpenGrading>,
+    pub answers: Vec<progress::AnswerRecord>,
+    pub topics: Vec<TopicOutcome>,
+    pub overall_score: u32,
+}
+
+/// The written answer imitates the exam, so it weighs more than the multiple-choice half.
+const OPEN_WEIGHT: f64 = 0.6;
+
+/// Grade both halves of a session, update mastery and the review schedule, and persist the
+/// whole thing.
+pub async fn finish_session(
+    vault: &Vault,
+    session_id: &str,
+    subject_id: &str,
+    open_answers: BTreeMap<String, String>,
+    quiz_selections: BTreeMap<String, Vec<usize>>,
+) -> Result<SessionResult> {
+    let plan = load_session(vault, subject_id, session_id)?;
+
+    let gradings = if plan.open_questions.is_empty() {
+        Vec::new()
+    } else {
+        grade_open(&plan, &open_answers).await?
+    };
+
+    let answers: Vec<progress::AnswerRecord> = plan
+        .quiz
+        .iter()
+        .map(|question| {
+            let selected = quiz_selections.get(&question.id).cloned().unwrap_or_default();
+            progress::AnswerRecord {
+                question_id: question.id.clone(),
+                topic_id: question.topic_id.clone(),
+                correct: question.is_correct(&selected),
+                selected,
+                hint_used: false,
+            }
+        })
+        .collect();
+    progress::apply_answers(vault, &answers)?;
+
+    let mut scores = BTreeMap::new();
+    let mut outcomes = Vec::new();
+    for entry in &plan.topics {
+        let topic_id = &entry.topic.id;
+        let open_score = gradings
+            .iter()
+            .find(|grading| &grading.topic_id == topic_id)
+            .map(|grading| grading.score.min(100));
+
+        let topic_answers: Vec<&progress::AnswerRecord> =
+            answers.iter().filter(|a| &a.topic_id == topic_id).collect();
+        let quiz_total = topic_answers.len();
+        let quiz_correct = topic_answers.iter().filter(|a| a.correct).count();
+        let quiz_score = (quiz_total > 0)
+            .then(|| ((quiz_correct as f64 / quiz_total as f64) * 100.0).round() as u32);
+
+        let score = match (open_score, quiz_score) {
+            (Some(open), Some(quiz)) => {
+                (open as f64 * OPEN_WEIGHT + quiz as f64 * (1.0 - OPEN_WEIGHT)).round() as u32
+            }
+            (Some(open), None) => open,
+            (None, Some(quiz)) => quiz,
+            (None, None) => 0,
+        };
+
+        scores.insert(topic_id.clone(), score);
+        outcomes.push(TopicOutcome {
+            topic_id: topic_id.clone(),
+            title: entry.topic.title.clone(),
+            score,
+            open_score,
+            quiz_correct,
+            quiz_total,
+            level: 0,
+            stage: study::Stage::New,
+            due_at: None,
+        });
+    }
+
+    // Scheduling is the source of truth for the level a topic lands on, so read it back
+    // rather than recomputing it here.
+    let state = study::record_scores(vault, &scores)?;
+    for outcome in &mut outcomes {
+        if let Some(entry) = state.topics.get(&outcome.topic_id) {
+            outcome.level = entry.level;
+            outcome.stage = entry.stage();
+            outcome.due_at = entry.due_at.clone();
+        }
+    }
+
+    let overall_score = if outcomes.is_empty() {
+        0
+    } else {
+        (outcomes.iter().map(|o| o.score as f64).sum::<f64>() / outcomes.len() as f64).round()
+            as u32
+    };
+
+    let result = SessionResult {
+        session_id: plan.id.clone(),
+        subject: plan.subject.clone(),
+        gradings,
+        answers,
+        topics: outcomes,
+        overall_score,
+    };
+    save_session(vault, &plan, Some(&result))?;
+    Ok(result)
+}
+
+async fn grade_open(
+    plan: &SessionPlan,
+    open_answers: &BTreeMap<String, String>,
+) -> Result<Vec<OpenGrading>> {
+    let mut block = String::new();
+    for (index, question) in plan.open_questions.iter().enumerate() {
+        let note = plan
+            .notes
+            .iter()
+            .find(|note| note.topic_id == question.topic_id);
+        let answer = open_answers
+            .get(&question.topic_id)
+            .map(|value| value.trim())
+            .filter(|value| !value.is_empty())
+            .unwrap_or("(студент не дав відповіді)");
+
+        block.push_str(&format!(
+            "## Відповідь {} — topic_id: {}\n\n### Питання\n{}\n\n### Очікувані пункти\n{}\n\n### Відповідь студента\n{}\n\n### Конспект теми\n{}\n\n",
+            index + 1,
+            question.topic_id,
+            question.question,
+            question
+                .expected_points
+                .iter()
+                .map(|point| format!("- {point}"))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            answer,
+            note.map(|note| truncate_chars(&note.body, 5000))
+                .unwrap_or_else(|| "(конспект недоступний)".to_string()),
+        ));
+    }
+
+    let prompt = GRADE_OPEN_PROMPT.replace("{{ANSWERS}}", &block);
+    let response =
+        agy::run::<GradingDraft>(&prompt, ModelTier::Smart, GRADE_OPEN_SCHEMA, KNOWLEDGE_TIMEOUT)
+            .await?;
+
+    Ok(response
+        .data
+        .gradings
+        .into_iter()
+        .filter(|grading| {
+            plan.open_questions
+                .iter()
+                .any(|question| question.topic_id == grading.topic_id)
+        })
+        .collect())
+}
+
+fn session_path(vault: &Vault, subject_id: &str, session_id: &str) -> std::path::PathBuf {
+    vault
+        .sessions_dir()
+        .join(format!("{subject_id}-{session_id}.json"))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct StoredSession {
+    plan: SessionPlan,
+    #[serde(default)]
+    result: Option<SessionResult>,
+}
+
+fn save_session(vault: &Vault, plan: &SessionPlan, result: Option<&SessionResult>) -> Result<()> {
+    let dir = vault.sessions_dir();
+    std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
+    let stored = StoredSession {
+        plan: plan.clone(),
+        result: result.cloned(),
+    };
+    let path = session_path(vault, &plan.subject, &plan.id);
+    std::fs::write(&path, serde_json::to_string_pretty(&stored)?)
+        .with_context(|| format!("writing {}", path.display()))?;
+    Ok(())
+}
+
+pub fn load_session(vault: &Vault, subject_id: &str, session_id: &str) -> Result<SessionPlan> {
+    let path = session_path(vault, subject_id, session_id);
+    let raw = std::fs::read_to_string(&path)
+        .with_context(|| format!("reading session {}", path.display()))?;
+    let stored: StoredSession =
+        serde_json::from_str(&raw).with_context(|| format!("parsing session {}", path.display()))?;
+    Ok(stored.plan)
 }

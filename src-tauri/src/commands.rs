@@ -4,10 +4,13 @@ use std::sync::Arc;
 use serde::Serialize;
 use tauri::{Emitter, Manager, State};
 
-use crate::generate::{self, GenerationEvent, Hint, KnowledgeBatchReport, QuizRequest};
+use crate::generate::{
+    self, GenerationEvent, Hint, KnowledgeBatchReport, QuizRequest, SessionPlan, SessionResult,
+};
 use crate::vault::knowledge::{self, KnowledgeNote};
 use crate::vault::progress::{self, Attempt, AttemptResult, SubjectStats};
 use crate::vault::quiz::{self, Quiz, QuizSummary};
+use crate::vault::study::{self, StudyOverview, TopicStudy};
 use crate::vault::syllabus::{self, Subject, Topic};
 use crate::vault::Vault;
 
@@ -41,6 +44,9 @@ pub struct SubjectDetail {
     pub knowledge_topic_ids: Vec<String>,
     pub quizzes: Vec<QuizSummary>,
     pub stats: SubjectStats,
+    pub study: StudyOverview,
+    /// Per-topic study state, keyed by topic id. Absent means never studied.
+    pub topic_study: BTreeMap<String, TopicStudy>,
 }
 
 #[derive(Debug, Serialize)]
@@ -103,10 +109,30 @@ pub fn get_subject(state: State<'_, AppState>, subject_id: String) -> CmdResult<
     let stats = progress::subject_stats(&mastery, &subject_id, &topics, ids.len());
     let quizzes = quiz::list(vault, &subject_id).map_err(fail)?;
 
+    // Only topics with a note can be studied, so the overview is scoped to those.
+    let state = study::load(vault);
+    let studiable: Vec<&Topic> = topics
+        .iter()
+        .copied()
+        .filter(|topic| ids.contains(&topic.id))
+        .collect();
+    let overview = study::overview(&state, &subject_id, &studiable);
+    let topic_study = topics
+        .iter()
+        .filter_map(|topic| {
+            state
+                .topics
+                .get(&topic.id)
+                .map(|entry| (topic.id.clone(), entry.clone()))
+        })
+        .collect();
+
     Ok(SubjectDetail {
         knowledge_topic_ids: ids,
         quizzes,
         stats,
+        study: overview,
+        topic_study,
         subject,
     })
 }
@@ -194,4 +220,47 @@ pub async fn get_hint(
 #[tauri::command]
 pub fn list_attempts(state: State<'_, AppState>, subject_id: Option<String>) -> Vec<Attempt> {
     progress::list_attempts(&state.vault, subject_id.as_deref())
+}
+
+// ---------------------------------------------------------------------------
+// study mode
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn start_study_session(
+    app: tauri::AppHandle,
+    subject_id: String,
+    size: Option<usize>,
+) -> CmdResult<SessionPlan> {
+    let vault = app.state::<AppState>().vault.clone();
+    generate::start_session(&vault, &subject_id, size.unwrap_or(3))
+        .await
+        .map_err(fail)
+}
+
+#[tauri::command]
+pub async fn finish_study_session(
+    app: tauri::AppHandle,
+    subject_id: String,
+    session_id: String,
+    open_answers: BTreeMap<String, String>,
+    quiz_selections: BTreeMap<String, Vec<usize>>,
+) -> CmdResult<SessionResult> {
+    let vault = app.state::<AppState>().vault.clone();
+    generate::finish_session(
+        &vault,
+        &session_id,
+        &subject_id,
+        open_answers,
+        quiz_selections,
+    )
+    .await
+    .map_err(fail)
+}
+
+/// Called when the student finishes reading a note, so a topic they have opened but not yet
+/// been tested on is visibly distinct from one they have never touched.
+#[tauri::command]
+pub fn mark_topic_read(state: State<'_, AppState>, topic_id: String) -> CmdResult<()> {
+    study::mark_read(&state.vault, &topic_id).map_err(fail)
 }

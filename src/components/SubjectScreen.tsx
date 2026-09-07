@@ -3,20 +3,29 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { ProgressTab } from "@/components/ProgressTab";
 import { QuizzesTab } from "@/components/QuizzesTab";
+import { StudyTab } from "@/components/StudyTab";
 import { TopicsTab } from "@/components/TopicsTab";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, errorMessage } from "@/lib/api";
-import type { Quiz, SubjectDetail } from "@/lib/types";
+import type { Quiz, SessionPlan, SubjectDetail, Topic } from "@/lib/types";
 
 interface Props {
   subjectId: string;
   onBack: () => void;
   onStartQuiz: (quiz: Quiz) => void;
+  onStartSession: (plan: SessionPlan) => void;
+  onOpenTopic: (topic: Topic) => void;
 }
 
-export function SubjectScreen({ subjectId, onBack, onStartQuiz }: Props) {
+export function SubjectScreen({
+  subjectId,
+  onBack,
+  onStartQuiz,
+  onStartSession,
+  onOpenTopic,
+}: Props) {
   const [detail, setDetail] = useState<SubjectDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,15 +76,19 @@ export function SubjectScreen({ subjectId, onBack, onStartQuiz }: Props) {
         </div>
       </div>
 
-      <Tabs defaultValue="topics">
+      <Tabs defaultValue="study">
         <TabsList>
+          <TabsTrigger value="study">Навчання</TabsTrigger>
           <TabsTrigger value="topics">Теми</TabsTrigger>
           <TabsTrigger value="quizzes">Тести</TabsTrigger>
           <TabsTrigger value="progress">Прогрес</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="study" className="pt-6">
+          <StudyTab detail={detail} onSessionStart={onStartSession} />
+        </TabsContent>
         <TabsContent value="topics" className="pt-6">
-          <TopicsTab detail={detail} onRefresh={load} />
+          <TopicsTab detail={detail} onRefresh={load} onOpenTopic={onOpenTopic} />
         </TabsContent>
         <TabsContent value="quizzes" className="pt-6">
           <QuizzesTab detail={detail} onStart={onStartQuiz} onRefresh={load} />

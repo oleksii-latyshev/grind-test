@@ -2,17 +2,21 @@ import { useEffect, useState } from "react";
 import { GraduationCap, Moon, Sun } from "lucide-react";
 
 import { QuizScreen } from "@/components/QuizScreen";
+import { ReaderScreen } from "@/components/ReaderScreen";
 import { ResultsScreen } from "@/components/ResultsScreen";
+import { StudySession } from "@/components/StudySession";
 import { SubjectScreen } from "@/components/SubjectScreen";
 import { SubjectsScreen } from "@/components/SubjectsScreen";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
-import type { AttemptResult, Quiz } from "@/lib/types";
+import type { AttemptResult, Quiz, SessionPlan, Topic } from "@/lib/types";
 import "./App.css";
 
 type View =
   | { name: "subjects" }
   | { name: "subject"; subjectId: string }
+  | { name: "reader"; topic: Topic }
+  | { name: "session"; plan: SessionPlan }
   | { name: "quiz"; quiz: Quiz }
   | { name: "results"; quiz: Quiz; result: AttemptResult };
 
@@ -55,6 +59,19 @@ function App() {
             subjectId={view.subjectId}
             onBack={() => setView({ name: "subjects" })}
             onStartQuiz={(quiz) => setView({ name: "quiz", quiz })}
+            onStartSession={(plan) => setView({ name: "session", plan })}
+            onOpenTopic={(topic) => setView({ name: "reader", topic })}
+          />
+        ) : view.name === "reader" ? (
+          <ReaderScreen
+            topic={view.topic}
+            onBack={() => setView({ name: "subject", subjectId: view.topic.subject })}
+          />
+        ) : view.name === "session" ? (
+          <StudySession
+            plan={view.plan}
+            onExit={() => setView({ name: "subject", subjectId: view.plan.subject })}
+            onFinished={() => setView({ name: "subject", subjectId: view.plan.subject })}
           />
         ) : view.name === "quiz" ? (
           <QuizScreen

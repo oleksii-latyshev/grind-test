@@ -2,9 +2,11 @@
 //!
 //! Bulk knowledge generation takes hours; running it here keeps it out of the GUI.
 
+use std::collections::BTreeMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use grind_test_lib::generate::{self, GenerationEvent, QuizRequest};
 use grind_test_lib::vault::paths::resolve_vault_root;
@@ -46,6 +48,24 @@ enum Command {
         force: bool,
         #[arg(long, default_value_t = 4)]
         concurrency: usize,
+    },
+    /// Start one study session and print it (does not record anything).
+    Session {
+        #[arg(short, long)]
+        subject: String,
+        #[arg(long, default_value_t = 3)]
+        size: usize,
+    },
+    /// Grade a session started with `session`, from a JSON file of answers.
+    ///
+    /// The file looks like `{"open": {"f7/1.1": "..."}, "quiz": {"q1": [0], "q2": [1, 3]}}`.
+    SessionFinish {
+        #[arg(short, long)]
+        subject: String,
+        #[arg(long)]
+        session: String,
+        #[arg(long)]
+        answers: PathBuf,
     },
     /// Generate one quiz (fast model).
     Quiz {
@@ -109,6 +129,72 @@ async fn main() -> Result<()> {
             );
             for error in &report.errors {
                 eprintln!("  ! {error}");
+            }
+        }
+        Command::Session { subject, size } => {
+            let plan = generate::start_session(&vault, &subject, size).await?;
+            println!("session {} — {} topics", plan.id, plan.topics.len());
+            for entry in &plan.topics {
+                println!(
+                    "  {} {} [{:?}, level {}]",
+                    entry.topic.id, entry.topic.title, entry.stage, entry.level
+                );
+            }
+            println!("\n-- open questions --");
+            for question in &plan.open_questions {
+                println!("\n[{}] {}", question.topic_id, question.question);
+                for point in &question.expected_points {
+                    println!("    · {point}");
+                }
+            }
+            println!("\n-- quiz ({} questions) --", plan.quiz.len());
+            for question in &plan.quiz {
+                println!("\n[{}] {}", question.topic_id, question.question);
+                for (index, option) in question.options.iter().enumerate() {
+                    let mark = if question.correct.contains(&index) { "*" } else { " " };
+                    println!("  {mark} {}. {option}", index + 1);
+                }
+            }
+        }
+        Command::SessionFinish {
+            subject,
+            session,
+            answers,
+        } => {
+            #[derive(serde::Deserialize, Default)]
+            struct AnswerFile {
+                #[serde(default)]
+                open: BTreeMap<String, String>,
+                #[serde(default)]
+                quiz: BTreeMap<String, Vec<usize>>,
+            }
+
+            let raw = std::fs::read_to_string(&answers)
+                .with_context(|| format!("reading {}", answers.display()))?;
+            let file: AnswerFile = serde_json::from_str(&raw).context("parsing answers file")?;
+
+            let result =
+                generate::finish_session(&vault, &session, &subject, file.open, file.quiz).await?;
+
+            println!("overall: {}%", result.overall_score);
+            for outcome in &result.topics {
+                println!(
+                    "\n{} — {}%  (open {:?}, quiz {}/{})\n  level {} [{:?}], next review {}",
+                    outcome.topic_id,
+                    outcome.score,
+                    outcome.open_score,
+                    outcome.quiz_correct,
+                    outcome.quiz_total,
+                    outcome.level,
+                    outcome.stage,
+                    outcome.due_at.as_deref().unwrap_or("-"),
+                );
+            }
+            for grading in &result.gradings {
+                println!("\n[{}] {}%\n  {}", grading.topic_id, grading.score, grading.verdict);
+                for point in &grading.missed {
+                    println!("  – пропущено: {point}");
+                }
             }
         }
         Command::Quiz {

@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "properties": {
+    "gradings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "topic_id": { "type": "string" },
+          "score": { "type": "integer" },
+          "verdict": { "type": "string" },
+          "covered": { "type": "array", "items": { "type": "string" } },
+          "missed": { "type": "array", "items": { "type": "string" } },
+          "correction": { "type": "string" }
+        },
+        "required": ["topic_id", "score", "verdict", "covered", "missed", "correction"]
+      }
+    }
+  },
+  "required": ["gradings"]
+}

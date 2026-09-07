@@ -1,0 +1,34 @@
+{
+  "type": "object",
+  "properties": {
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "topic_id": { "type": "string" },
+          "question": { "type": "string" },
+          "expected_points": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["topic_id", "question", "expected_points"]
+      }
+    },
+    "quiz_questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "topic_id": { "type": "string" },
+          "type": { "type": "string", "enum": ["single", "multi"] },
+          "question": { "type": "string" },
+          "options": { "type": "array", "items": { "type": "string" } },
+          "correct": { "type": "array", "items": { "type": "integer" } },
+          "explanation": { "type": "string" },
+          "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] }
+        },
+        "required": ["topic_id", "type", "question", "options", "correct", "explanation", "difficulty"]
+      }
+    }
+  },
+  "required": ["open_questions", "quiz_questions"]
+}

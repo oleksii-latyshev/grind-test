@@ -22,6 +22,29 @@ vault/progress/attempts/<attempt-id>.json  →  vault/progress/mastery.json
 Hints during a quiz are a separate on-demand call to the **smart** model, grounded in the
 knowledge note for that question's topic. A hint must never contain the answer.
 
+## Study mode
+
+The quiz pipeline tests what you know; study mode is how you learn it in the first place, and
+it is the primary way into the app. One session covers 2-6 topics:
+
+```
+read the notes  →  answer one open question per topic  →  mini-quiz  →  graded, rescheduled
+                   (exam format: 3 broad questions)      (4 per topic)
+```
+
+Cost per session is fixed at **two model calls**: one fast call producing the open questions
+(with an `expected_points` rubric) and the whole mini-quiz together, one smart call grading
+every written answer at once. Never grade answers one call at a time.
+
+A topic's session score is `0.6 × open + 0.4 × quiz` — the written half weighs more because
+it is what the exam actually asks for. That score moves the topic along a Leitner ladder in
+`vault/progress/study.json`: pass (≥80) climbs a level, ≥60 holds, below 60 drops one, and
+the new level sets the review date (1 → 2 → 4 → 7 → 14 → 30 days). `study::plan_session`
+serves overdue reviews first, then unseen topics in syllabus order.
+
+Sessions persist to `vault/progress/sessions/` on start, so quitting mid-session loses
+nothing, and grading reads the plan back from disk rather than trusting the client.
+
 **Model economy is a hard requirement.** Smart model = knowledge generation + hints (rare,
 cached on disk). Fast model = quiz generation (frequent). Never generate knowledge with the
 fast model, never generate quizzes with the smart model.
@@ -58,6 +81,7 @@ Layout:
 | `src-tauri/src/vault/knowledge.rs` | read/write knowledge notes + frontmatter |
 | `src-tauri/src/vault/quiz.rs` | quiz model, read/write `vault/quizzes/` |
 | `src-tauri/src/vault/progress.rs` | attempts, mastery aggregation, topic weighting |
+| `src-tauri/src/vault/study.rs` | study state, session planning, review scheduling |
 | `src-tauri/src/agy.rs` | spawn the `agy` CLI, parse its JSON envelope |
 | `src-tauri/src/generate.rs` | prompt assembly + the three generation jobs |
 | `src-tauri/src/commands.rs` | `#[tauri::command]` surface |
@@ -135,4 +159,6 @@ bun run tauri dev      # full app
 bun run build          # tsc + vite build
 cd src-tauri && cargo check
 cd src-tauri && cargo run --bin grind -- knowledge --subject f3
+cd src-tauri && cargo run --bin grind -- session --subject f7 --size 2
+cd src-tauri && cargo run --bin grind -- session-finish --subject f7 --session <id> --answers a.json
 ```

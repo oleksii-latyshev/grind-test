@@ -11,6 +11,8 @@ import type {
   Quiz,
   QuizRequest,
   QuizSummary,
+  SessionPlan,
+  SessionResult,
   SubjectDetail,
   SubjectOverview,
   VaultInfo,
@@ -66,6 +68,25 @@ export const api = {
 
   listAttempts: (subjectId?: string) =>
     invoke<Attempt[]>("list_attempts", { subjectId: subjectId ?? null }),
+
+  /** Picks the topics, then generates the open questions and mini-quiz in one call. */
+  startStudySession: (subjectId: string, size: number) =>
+    invoke<SessionPlan>("start_study_session", { subjectId, size }),
+
+  finishStudySession: (options: {
+    subjectId: string;
+    sessionId: string;
+    openAnswers: Record<string, string>;
+    quizSelections: Record<string, number[]>;
+  }) =>
+    invoke<SessionResult>("finish_study_session", {
+      subjectId: options.subjectId,
+      sessionId: options.sessionId,
+      openAnswers: options.openAnswers,
+      quizSelections: options.quizSelections,
+    }),
+
+  markTopicRead: (topicId: string) => invoke<void>("mark_topic_read", { topicId }),
 };
 
 export function onGenerationProgress(

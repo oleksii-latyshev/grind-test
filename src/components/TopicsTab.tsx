@@ -2,19 +2,20 @@ import { useMemo, useState } from "react";
 import { CheckCircle2, Circle, Loader2, Sparkles, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
-import { KnowledgeDialog } from "@/components/KnowledgeDialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { api, errorMessage, onGenerationProgress } from "@/lib/api";
-import type { SubjectDetail, Topic } from "@/lib/types";
+import { STAGES } from "@/lib/study";
+import type { Stage, SubjectDetail, Topic } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface Props {
   detail: SubjectDetail;
   onRefresh: () => void;
+  onOpenTopic: (topic: Topic) => void;
 }
 
 interface RunState {
@@ -24,9 +25,8 @@ interface RunState {
   failed: string[];
 }
 
-export function TopicsTab({ detail, onRefresh }: Props) {
+export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [openTopic, setOpenTopic] = useState<Topic | null>(null);
   const [run, setRun] = useState<RunState | null>(null);
 
   const covered = useMemo(
@@ -37,6 +37,15 @@ export function TopicsTab({ detail, onRefresh }: Props) {
     () => detail.subject.sections.flatMap((s) => s.topics).filter((t) => !covered.has(t.id)),
     [detail.subject, covered],
   );
+
+  function stageOf(topicId: string): Stage {
+    const entry = detail.topic_study[topicId];
+    if (!entry) return "new";
+    if (entry.level === 0) return entry.read_count > 0 ? "reading" : "new";
+    if (entry.level <= 2) return "learning";
+    if (entry.level <= 4) return "review";
+    return "mastered";
+  }
 
   function toggle(topicId: string) {
     setSelected((current) => {
@@ -178,7 +187,7 @@ export function TopicsTab({ detail, onRefresh }: Props) {
                     <button
                       type="button"
                       className="flex flex-1 items-start gap-3 text-left"
-                      onClick={() => setOpenTopic(topic)}
+                      onClick={() => onOpenTopic(topic)}
                     >
                       <Badge variant="outline" className="mt-px shrink-0 font-mono text-[0.7rem]">
                         {topic.index}
@@ -187,11 +196,7 @@ export function TopicsTab({ detail, onRefresh }: Props) {
                         {topic.title}
                       </span>
                     </button>
-                    {has ? (
-                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
-                    ) : (
-                      <Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground/40" />
-                    )}
+                    <StageMark stage={stageOf(topic.id)} hasNote={has} />
                   </li>
                 );
               })}
@@ -200,7 +205,19 @@ export function TopicsTab({ detail, onRefresh }: Props) {
         ))}
       </div>
 
-      <KnowledgeDialog topic={openTopic} onClose={() => setOpenTopic(null)} />
     </div>
+  );
+}
+
+/** Knowledge presence plus how far the student has got with the topic. */
+function StageMark({ stage, hasNote }: { stage: Stage; hasNote: boolean }) {
+  if (!hasNote) {
+    return <Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground/40" />;
+  }
+  return (
+    <span className="mt-px flex shrink-0 items-center gap-1.5">
+      <span className={cn("text-xs", STAGES[stage].className)}>{STAGES[stage].label}</span>
+      <CheckCircle2 className={cn("size-4", STAGES[stage].className)} />
+    </span>
   );
 }
