@@ -36,12 +36,25 @@ Cost per session is fixed at **two model calls**: one fast call producing the op
 (with an `expected_points` rubric) and the whole mini-quiz together, one smart call grading
 every written answer at once. Never grade answers one call at a time.
 
-`SessionMode` picks the trade-off. **Full** reads the whole note, asks for an essay-length
-answer and 4 quiz questions per topic (~20 min/topic). **Sprint** reads
-`knowledge::digest` — the summary plus the key-terms and exam-traps sections, about a third
-of the note — asks for recall as a short list and 3 questions per topic (~8 min/topic), and
-plans with `plan_sprint`, which covers unseen topics before revisiting anything. The digest
-needs no model call: the generator already writes those sections into every note.
+`SessionMode` picks the trade-off, cutting the two costly halves — reading the note and
+writing the answer — in that order:
+
+| | reading | answer | quiz/topic | ~min/topic |
+|---|---|---|---|---|
+| `Full` | whole note | several paragraphs | 4 | 20 |
+| `Balanced` | whole note | short list | 4 | 13 |
+| `Sprint` | `knowledge::digest` | short list | 3 | 8 |
+
+Cutting the reading is what makes a fast session forgettable — a digest carries terms and
+traps but not the mechanism, and you cannot recall what you were never shown. So `Balanced`
+gives up the essay and keeps the note; only `Sprint` gives up the note. The digest needs no
+model call: the generator already writes those sections into every note.
+
+`Selection` decides which topics when they are not listed explicitly. `Scheduled` follows the
+ladder (or, in a sprint, `plan_sprint` — unseen topics in syllabus order, since a sprint is
+about coverage). `Spread` cuts the candidates into as many equal slices as there are topics
+to pick and takes one from each, weighted toward the weakest: the exam draws its questions
+from across the course, and always walking the syllabus front to back never rehearses that.
 
 Questions are always generated from exactly what the student was shown, so a sprint can never
 be tested on material its digest omitted. The grading prompt is told which mode produced the

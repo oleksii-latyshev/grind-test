@@ -212,7 +212,10 @@ export interface OpenQuestion {
 }
 
 /** How a session trades depth for coverage. */
-export type SessionMode = "full" | "sprint";
+export type SessionMode = "full" | "balanced" | "sprint";
+
+/** How topics are chosen when they are not listed explicitly. */
+export type Selection = "scheduled" | "spread";
 
 export interface SessionPlan {
   id: string;

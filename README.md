@@ -23,11 +23,14 @@ vault/progress/                  ← attempts + a mastery table that weights
 Asking for a hint mid-quiz is a separate call to the smart model, grounded in that topic's
 study note; it never names the correct option.
 
-Study sessions come at two paces. **Full** works through the whole note and an essay-length
-written answer, the way the oral exam is scored. **Sprint** reads a condensed version of the
-note — summary, key terms, common traps — and asks for recall as a short list, covering
-unseen ground first. The app estimates how long each pace would take to get through what is
+Study sessions come at three paces. **Full** works through the whole note and an essay-length
+written answer, the way the oral exam is scored. **Balanced** keeps the same note but takes
+the answer as a short list. **Sprint** also condenses the note down to its summary, key terms
+and common traps. The app estimates how long each pace would take to get through what is
 left.
+
+Topics can be served by the review schedule, chosen by hand, or drawn **the way an exam paper
+draws them** — one from each part of the syllabus, at random, leaning toward the weakest.
 
 All generation goes through the [Antigravity](https://antigravity.google) CLI (`agy`).
 

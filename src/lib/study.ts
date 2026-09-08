@@ -43,22 +43,26 @@ export function scoreTone(score: number): string {
 /**
  * Minutes a topic takes end to end — reading, answering, quiz, reading the feedback.
  *
- * `full` is measured: roughly 20 minutes per topic in practice. `sprint` is an estimate
- * built from the parts that shrink — a digest is about a third of a note, and a bulleted
- * recall replaces several paragraphs of writing.
+ * `full` is measured: roughly 20 minutes per topic in practice. The others are estimates
+ * built from the parts that shrink — `balanced` keeps the reading and replaces several
+ * paragraphs of writing with a bulleted recall; `sprint` also cuts the note to its digest,
+ * about a third of the text.
  */
 export const MINUTES_PER_TOPIC: Record<SessionMode, number> = {
   full: 20,
+  balanced: 13,
   sprint: 8,
 };
 
 export const SESSION_SIZES: Record<SessionMode, number[]> = {
   full: [2, 3, 5],
+  balanced: [3, 5, 8],
   sprint: [5, 8, 10],
 };
 
 export const MAX_TOPICS: Record<SessionMode, number> = {
   full: 6,
+  balanced: 8,
   sprint: 10,
 };
 

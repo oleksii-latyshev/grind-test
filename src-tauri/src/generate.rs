@@ -640,7 +640,6 @@ mod tests {
 // ---------------------------------------------------------------------------
 
 const SESSION_PROMPT: &str = include_str!("../prompts/session.md");
-const SESSION_SPRINT_PROMPT: &str = include_str!("../prompts/session_sprint.md");
 const GRADE_OPEN_PROMPT: &str = include_str!("../prompts/grade_open.md");
 const SESSION_SCHEMA: &str = include_str!("../schemas/session.json");
 const GRADE_OPEN_SCHEMA: &str = include_str!("../schemas/grade_open.json");
@@ -658,13 +657,20 @@ pub const MAX_SESSION_TOPICS: usize = 6;
 pub const MAX_SPRINT_TOPICS: usize = 10;
 
 /// How a session trades depth for coverage.
+///
+/// The two costly halves of a session are reading the note and writing the answer, and the
+/// modes cut them in that order: `Balanced` keeps the full note but drops the essay, and
+/// only `Sprint` gives up the note itself. Cutting the reading first is what makes a fast
+/// session forgettable — you cannot recall a mechanism you were never shown.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SessionMode {
-    /// Full notes, an essay-length written answer, four quiz questions per topic.
+    /// Full note, essay-length written answer, 4 quiz questions per topic.
     #[default]
     Full,
-    /// Condensed notes, recall as a short list, three quiz questions per topic.
+    /// Full note, recall as a short list, 4 quiz questions per topic.
+    Balanced,
+    /// Condensed note, recall as a short list, 3 quiz questions per topic.
     Sprint,
 }
 
@@ -672,32 +678,64 @@ impl SessionMode {
     fn max_topics(self) -> usize {
         match self {
             SessionMode::Full => MAX_SESSION_TOPICS,
+            SessionMode::Balanced => 8,
             SessionMode::Sprint => MAX_SPRINT_TOPICS,
         }
     }
 
-    fn prompt(self) -> &'static str {
-        match self {
-            SessionMode::Full => SESSION_PROMPT,
-            SessionMode::Sprint => SESSION_SPRINT_PROMPT,
-        }
+    /// Only a sprint trades away the body of the note.
+    fn reads_digest(self) -> bool {
+        matches!(self, SessionMode::Sprint)
     }
 
     fn questions_per_topic(self) -> usize {
         match self {
-            SessionMode::Full => 4,
+            SessionMode::Full | SessionMode::Balanced => 4,
             SessionMode::Sprint => 3,
         }
     }
 
-    /// Told to the grader, so a deliberately terse sprint answer is not marked down for
-    /// being terse — otherwise every sprint score would collapse and drag the ladder with it.
+    fn notes_kind(self) -> &'static str {
+        if self.reads_digest() {
+            "Condensed notes (summary, key terms and common traps only)"
+        } else {
+            "Study notes"
+        }
+    }
+
+    fn open_style(self) -> &'static str {
+        match self {
+            SessionMode::Full => "These imitate the oral/written exam, where the student gets three broad questions and has to develop an answer of several paragraphs. So each question must be **broad enough to require a structured answer** — a definition plus a mechanism, a classification, a comparison, or a worked application — and never answerable in one word.",
+            SessionMode::Balanced | SessionMode::Sprint => "Each asks the student to **recall the substance as a short list**, not to write prose. Phrase them so a telegraphic answer is clearly what you want, e.g. \"Перелічіть …\", \"Назвіть …\", \"Коротко зіставте …\". A complete answer should take 4-6 bullet points.",
+        }
+    }
+
+    fn quiz_style(self) -> &'static str {
+        match self {
+            SessionMode::Sprint => "Aim at the distinctions the student is most likely to confuse under time pressure, and keep `explanation` to one or two sentences — it is read at speed.",
+            _ => "Vary what you ask for: definitions, classification, \"which statement is false\", ordering of stages, choosing the right method for a situation. `explanation`: 1-3 sentences on why the correct option is right.",
+        }
+    }
+
+    /// Told to the grader, so a deliberately terse answer is not marked down for being
+    /// terse — otherwise every fast-mode score would collapse and drag the ladder with it.
     fn answer_style(self) -> &'static str {
         match self {
             SessionMode::Full => "The student was asked for a developed written answer of several paragraphs, as in the oral exam.",
-            SessionMode::Sprint => "The student was in rapid revision mode and was asked to recall the substance as a short list. Judge only whether the required points are named and correct. Do not deduct for telegraphic style, missing introductions, sentence fragments or absent connective prose — that form was requested.",
+            SessionMode::Balanced | SessionMode::Sprint => "The student was asked to recall the substance as a short list, not as prose. Judge only whether the required points are named and correct. Do not deduct for telegraphic style, missing introductions, sentence fragments or absent connective prose — that form was requested.",
         }
     }
+}
+
+/// How the topics for a session are chosen when they are not listed explicitly.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Selection {
+    /// Follow the review ladder (or, in a sprint, syllabus order over unseen topics).
+    #[default]
+    Scheduled,
+    /// One topic from each part of the syllabus, the way an exam paper draws them.
+    Spread,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -750,6 +788,7 @@ pub async fn start_session(
     size: usize,
     topic_ids: Option<Vec<String>>,
     mode: SessionMode,
+    selection: Selection,
 ) -> Result<SessionPlan> {
     let subject = syllabus::load(vault, subject_id)?;
     let state = study::load(vault);
@@ -777,9 +816,12 @@ pub async fn start_session(
         }
         _ => {
             let size = size.clamp(1, mode.max_topics());
-            match mode {
-                SessionMode::Full => study::plan_session(&state, &studiable, size),
-                SessionMode::Sprint => study::plan_sprint(&state, &studiable, size),
+            match (selection, mode) {
+                (Selection::Spread, _) => study::plan_spread(&state, &studiable, size),
+                (Selection::Scheduled, SessionMode::Sprint) => {
+                    study::plan_sprint(&state, &studiable, size)
+                }
+                (Selection::Scheduled, _) => study::plan_session(&state, &studiable, size),
             }
         }
     };
@@ -796,9 +838,10 @@ pub async fn start_session(
         };
         // The questions are generated from exactly what the student is shown, so a sprint
         // can never be tested on material its digest left out.
-        let shown = match mode {
-            SessionMode::Full => note.body.clone(),
-            SessionMode::Sprint => knowledge::digest(&note.body),
+        let shown = if mode.reads_digest() {
+            knowledge::digest(&note.body)
+        } else {
+            note.body.clone()
         };
         knowledge_block.push_str(&format!(
             "### topic_id: {}\nТема: {}\n\n{}\n\n",
@@ -813,10 +856,12 @@ pub async fn start_session(
         bail!("could not load the knowledge notes for the planned topics");
     }
 
-    let quiz_count = (notes.len() * mode.questions_per_topic()).clamp(6, 24);
-    let prompt = mode
-        .prompt()
+    let quiz_count = (notes.len() * mode.questions_per_topic()).clamp(6, 32);
+    let prompt = SESSION_PROMPT
+        .replace("{{NOTES_KIND}}", mode.notes_kind())
         .replace("{{KNOWLEDGE}}", &knowledge_block)
+        .replace("{{OPEN_STYLE}}", mode.open_style())
+        .replace("{{QUIZ_STYLE}}", mode.quiz_style())
         .replace("{{QUIZ_COUNT}}", &quiz_count.to_string());
 
     let response =

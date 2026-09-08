@@ -34,7 +34,7 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type Pick = "auto" | "manual";
+type Pick = "auto" | "spread" | "manual";
 
 const PACE: Record<SessionMode, { label: string; blurb: string }> = {
   full: {
@@ -42,10 +42,31 @@ const PACE: Record<SessionMode, { label: string; blurb: string }> = {
     blurb:
       "Повний конспект, розгорнута письмова відповідь як на екзамені, 4 питання квізу на тему.",
   },
+  balanced: {
+    label: "Збалансований",
+    blurb:
+      "Той самий повний конспект — скорочується не читання, а відповідь: замість тексту короткі пункти, 4 питання квізу на тему.",
+  },
   sprint: {
     label: "Спринт",
     blurb:
-      "Стислий конспект — суть, ключові терміни й типові пастки. Відповідь короткими пунктами, 3 питання квізу на тему.",
+      "Стислий конспект — суть, ключові терміни й типові пастки. Відповідь пунктами, 3 питання квізу на тему.",
+  },
+};
+
+const PICK: Record<Pick, { label: string; blurb: string }> = {
+  auto: {
+    label: "Автоматично",
+    blurb: "Спершу прострочені повторення, далі нові теми за порядком силабуса.",
+  },
+  spread: {
+    label: "Як на екзамені",
+    blurb:
+      "По одній темі з кожної частини силабуса — з початку, середини й кінця, як витягують білет. Усередині кожної частини випадково, з ухилом до слабших тем.",
+  },
+  manual: {
+    label: "Обрати теми",
+    blurb: "",
   },
 };
 
@@ -76,7 +97,9 @@ export function StudyTab({ detail, onSessionStart }: Props) {
   const ready = study.available > 0;
   const atCap = chosen.length >= MAX_TOPICS[pace];
   const canStart =
-    ready && !starting && (pick === "auto" ? study.due_now > 0 : chosen.length > 0);
+    ready &&
+    !starting &&
+    (pick === "manual" ? chosen.length > 0 : pick === "spread" || study.due_now > 0);
 
   // What is left to cover at least once, and what that costs at each pace.
   const remaining = study.available - study.mastered - study.review;
@@ -92,9 +115,13 @@ export function StudyTab({ detail, onSessionStart }: Props) {
     setStarting(true);
     try {
       onSessionStart(
-        pick === "manual"
-          ? await api.startStudySession(detail.subject.id, chosen.length, pace, chosen)
-          : await api.startStudySession(detail.subject.id, size, pace),
+        await api.startStudySession({
+          subjectId: detail.subject.id,
+          size: pick === "manual" ? chosen.length : size,
+          mode: pace,
+          selection: pick === "spread" ? "spread" : "scheduled",
+          topicIds: pick === "manual" ? chosen : undefined,
+        }),
       );
     } catch (error) {
       toast.error(errorMessage(error));
@@ -190,8 +217,9 @@ export function StudyTab({ detail, onSessionStart }: Props) {
           {remaining > 0 ? (
             <p className="text-xs leading-relaxed text-muted-foreground">
               Залишилось пройти щонайменше раз: <strong>{remaining}</strong> тем — це
-              приблизно <strong>{estimate("full")}</strong> у повному режимі або{" "}
-              <strong>{estimate("sprint")}</strong> у спринті.
+              приблизно <strong>{estimate("full")}</strong> повним режимом,{" "}
+              <strong>{estimate("balanced")}</strong> збалансованим або{" "}
+              <strong>{estimate("sprint")}</strong> спринтом.
             </p>
           ) : null}
         </CardContent>
@@ -214,7 +242,7 @@ export function StudyTab({ detail, onSessionStart }: Props) {
               Темп
             </p>
             <div className="flex flex-wrap gap-2">
-              {(["full", "sprint"] as const).map((value) => (
+              {(["full", "balanced", "sprint"] as const).map((value) => (
                 <Segment key={value} active={pace === value} onClick={() => changePace(value)}>
                   {PACE[value].label}
                 </Segment>
@@ -225,16 +253,20 @@ export function StudyTab({ detail, onSessionStart }: Props) {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Segment active={pick === "auto"} onClick={() => setPick("auto")}>
-              Автоматично
-            </Segment>
-            <Segment active={pick === "manual"} onClick={() => setPick("manual")}>
-              Обрати теми
-            </Segment>
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Добір тем
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(["auto", "spread", "manual"] as const).map((value) => (
+                <Segment key={value} active={pick === value} onClick={() => setPick(value)}>
+                  {PICK[value].label}
+                </Segment>
+              ))}
+            </div>
           </div>
 
-          {pick === "auto" ? (
+          {pick !== "manual" ? (
             <div className="space-y-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Тем за сесію
@@ -246,10 +278,12 @@ export function StudyTab({ detail, onSessionStart }: Props) {
                   </Segment>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {pace === "sprint"
-                  ? "Спершу теми, яких ви ще не бачили, за порядком силабуса — щоб охопити весь предмет."
-                  : "Спершу прострочені повторення, далі нові теми за порядком силабуса."}
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {pick === "spread"
+                  ? PICK.spread.blurb
+                  : pace === "sprint"
+                    ? "Спершу теми, яких ви ще не бачили, за порядком силабуса — щоб охопити весь предмет."
+                    : PICK.auto.blurb}
               </p>
             </div>
           ) : (

@@ -101,7 +101,10 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
   }
 
   const answeredQuiz = Object.values(quizSelections).filter((s) => s.length > 0).length;
-  const sprint = plan.mode === "sprint";
+  // Two independent choices: a sprint shortens the reading, and everything but the full
+  // mode shortens the answer.
+  const digest = plan.mode === "sprint";
+  const listAnswer = plan.mode !== "full";
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 p-8">
@@ -144,7 +147,7 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
                 <span className="text-xs text-muted-foreground">
                   Тема {readIndex + 1} з {plan.topics.length}
                 </span>
-                {sprint ? (
+                {digest ? (
                   <Badge variant="secondary" className="gap-1">
                     <Zap className="size-3" />
                     Стисло
@@ -179,10 +182,10 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
           <div className="space-y-1">
             <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
               <PenLine className="size-5 text-primary" />
-              {sprint ? "Ключові пункти" : "Відкриті питання"}
+              {listAnswer ? "Ключові пункти" : "Відкриті питання"}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {sprint
+              {listAnswer
                 ? "Перелічіть головне короткими пунктами — зв'язний текст не потрібен, оцінюється лише суть."
                 : "Відповідайте розгорнуто, як на екзамені."}{" "}
               Розбір побачите наприкінці сесії.
@@ -199,7 +202,7 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
                   {index + 1}. {question.question}
                 </p>
                 <Textarea
-                  rows={sprint ? 5 : 8}
+                  rows={listAnswer ? 5 : 8}
                   value={openAnswers[question.topic_id] ?? ""}
                   onChange={(event) => {
                     // Read the value now: React clears `currentTarget` once the handler
@@ -211,7 +214,7 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
                       [question.topic_id]: value,
                     }));
                   }}
-                  placeholder={sprint ? "Коротко, пунктами…" : "Ваша відповідь…"}
+                  placeholder={listAnswer ? "Коротко, пунктами…" : "Ваша відповідь…"}
                 />
               </CardContent>
             </Card>

@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
-use grind_test_lib::generate::{self, GenerationEvent, QuizRequest, SessionMode};
+use grind_test_lib::generate::{self, GenerationEvent, QuizRequest, Selection, SessionMode};
 use grind_test_lib::vault::paths::resolve_vault_root;
 use grind_test_lib::vault::progress;
 use grind_test_lib::vault::quiz::Difficulty;
@@ -58,9 +58,12 @@ enum Command {
         /// Study these topic ids instead of what the scheduler would serve.
         #[arg(short, long = "topic")]
         topics: Vec<String>,
-        /// Rapid revision: condensed notes, recall as a list, shorter quiz.
+        /// Pace: full notes and an essay, full notes and a list, or condensed notes.
+        #[arg(short, long, value_enum, default_value_t = ModeArg::Full)]
+        mode: ModeArg,
+        /// Draw topics from across the syllabus, the way an exam paper does.
         #[arg(long)]
-        sprint: bool,
+        spread: bool,
     },
     /// Grade a session started with `session`, from a JSON file of answers.
     ///
@@ -82,6 +85,23 @@ enum Command {
         #[arg(short, long, value_enum, default_value_t = DifficultyArg::Mixed)]
         difficulty: DifficultyArg,
     },
+}
+
+#[derive(Copy, Clone, ValueEnum)]
+enum ModeArg {
+    Full,
+    Balanced,
+    Sprint,
+}
+
+impl From<ModeArg> for SessionMode {
+    fn from(value: ModeArg) -> Self {
+        match value {
+            ModeArg::Full => SessionMode::Full,
+            ModeArg::Balanced => SessionMode::Balanced,
+            ModeArg::Sprint => SessionMode::Sprint,
+        }
+    }
 }
 
 #[derive(Copy, Clone, ValueEnum)]
@@ -135,15 +155,18 @@ async fn main() -> Result<()> {
             subject,
             size,
             topics,
-            sprint,
+            mode,
+            spread,
         } => {
             let chosen = (!topics.is_empty()).then_some(topics);
-            let mode = if sprint {
-                SessionMode::Sprint
+            let selection = if spread {
+                Selection::Spread
             } else {
-                SessionMode::Full
+                Selection::Scheduled
             };
-            let plan = generate::start_session(&vault, &subject, size, chosen, mode).await?;
+            let plan =
+                generate::start_session(&vault, &subject, size, chosen, mode.into(), selection)
+                    .await?;
             println!("session {} — {} topics", plan.id, plan.topics.len());
             for entry in &plan.topics {
                 println!(
