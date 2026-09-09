@@ -56,6 +56,12 @@ traps but not the mechanism, and you cannot recall what you were never shown. So
 gives up the essay and keeps the note; only `Sprint` gives up the note. The digest needs no
 model call: the generator already writes those sections into every note.
 
+The digest leads with `## Головне` — the topic answered in one paragraph, the minimum that
+would still pass, generated as `exam_answer` alongside the note. That is what a condensed
+reading is for: `summary` says what the topic *is*, `## Головне` is what you would actually
+write. Notes generated before the field existed have no such section and fall back to the
+summary, so nothing needs regenerating; `--force` picks it up when you want it.
+
 `Selection` decides which topics when they are not listed explicitly. `Scheduled` follows the
 ladder (or, in a sprint, `plan_sprint` — unseen topics in syllabus order, since a sprint is
 about coverage). `Spread` cuts the candidates into as many equal slices as there are topics

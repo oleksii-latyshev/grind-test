@@ -1,20 +1,45 @@
 {
   "type": "object",
   "properties": {
-    "summary": { "type": "string" },
-    "markdown": { "type": "string" },
+    "summary": {
+      "type": "string"
+    },
+    "exam_answer": {
+      "type": "string"
+    },
+    "markdown": {
+      "type": "string"
+    },
     "key_terms": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "term": { "type": "string" },
-          "definition": { "type": "string" }
+          "term": {
+            "type": "string"
+          },
+          "definition": {
+            "type": "string"
+          }
         },
-        "required": ["term", "definition"]
+        "required": [
+          "term",
+          "definition"
+        ]
       }
     },
-    "exam_traps": { "type": "array", "items": { "type": "string" } }
+    "exam_traps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
   },
-  "required": ["summary", "markdown", "key_terms", "exam_traps"]
+  "required": [
+    "summary",
+    "exam_answer",
+    "markdown",
+    "key_terms",
+    "exam_traps"
+  ]
 }

@@ -18,6 +18,11 @@ opening another source. Cover the topic exactly as worded above — if the wordi
 several items ("Критерій A. Критерій B."), cover every one of them.
 
 - `summary`: 2-3 sentences stating what this topic is and why it matters.
+- `exam_answer`: ONE paragraph, 90-140 words, that is the *minimum answer that would still
+  pass* if the examiner asked about this topic and the student had time for nothing else.
+  Not a description of the topic and not a plan of what could be said — the substance
+  itself: the definition, the mechanism or the classification that carries the answer, and
+  the one distinction an examiner listens for. Continuous prose, no lists, no headings.
 - `markdown`: the full note. Use `##` headings, short paragraphs and lists. Include
   definitions, the mechanism or procedure, classifications, formulas (as LaTeX inside `$...$`
   when a formula is genuinely part of the topic), a concrete worked example or application,

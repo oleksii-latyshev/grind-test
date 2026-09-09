@@ -116,22 +116,31 @@ fn parse(raw: &str, path: &PathBuf) -> KnowledgeNote {
     note
 }
 
-/// Headings the generator always writes, and the only ones a fast revision pass needs.
-const DIGEST_SECTIONS: [&str; 2] = ["## Ключові терміни", "## На чому підловлюють"];
+/// The topic answered in a single paragraph — the substance an examiner is listening for,
+/// not a description of what the topic covers.
+pub const CORE_HEADING: &str = "## Головне";
 
-/// A short version of a note for fast revision: the opening summary plus the key-terms and
-/// exam-traps sections.
+/// Headings the generator always writes, and the only ones a fast revision pass needs.
+const DIGEST_SECTIONS: [&str; 3] = [
+    CORE_HEADING,
+    "## Ключові терміни",
+    "## На чому підловлюють",
+];
+
+/// A short version of a note for fast revision: the opening summary, the one-paragraph
+/// answer, and the key-terms and exam-traps sections.
 ///
 /// No model call is involved — the generator already produced this material as part of every
-/// note, so a sprint costs nothing extra to prepare.
+/// note, so a sprint costs nothing extra to prepare. A note written before `## Головне`
+/// existed simply contributes no such section, and its summary still leads.
 pub fn digest(body: &str) -> String {
     let sections: Vec<String> = DIGEST_SECTIONS
         .iter()
         .filter_map(|heading| extract_section(body, heading))
         .collect();
 
-    // Neither heading means the note was not written by our generator, so there is nothing
-    // to condense down to; a trimmed full note beats a two-sentence summary.
+    // No heading at all means the note was not written by our generator, so there is
+    // nothing to condense down to; a trimmed full note beats a two-sentence summary.
     if sections.is_empty() {
         return truncate(body, 2200);
     }
@@ -198,19 +207,40 @@ pub fn write(vault: &Vault, topic: &Topic, model: &str, body: &str) -> Result<Kn
 mod tests {
     use super::*;
 
-    const FULL_NOTE: &str = "Стисла суть теми у двох реченнях, якої достатньо для орієнтації.\n\n## Розділ\n\nДовгий текст.\n\n## Ще розділ\n\nЩе довший текст.\n\n## Ключові терміни\n\n- **Термін** — визначення терміна, достатньо докладне для повторення.\n- **Інший** — ще одне визначення, яке також займає місце.\n\n## На чому підловлюють\n\n- Плутають одне з іншим, і це найчастіша помилка на екзамені.\n- Забувають про третій випадок, який завжди запитують окремо.\n";
+    const FULL_NOTE: &str = "Стисла суть теми у двох реченнях, якої достатньо для орієнтації.\n\n## Головне\n\nВідповідь одним абзацом, яку студент написав би на екзамені.\n\n## Розділ\n\nДовгий текст.\n\n## Ще розділ\n\nЩе довший текст.\n\n## Ключові терміни\n\n- **Термін** — визначення терміна, достатньо докладне для повторення.\n- **Інший** — ще одне визначення, яке також займає місце.\n\n## На чому підловлюють\n\n- Плутають одне з іншим, і це найчастіша помилка на екзамені.\n- Забувають про третій випадок, який завжди запитують окремо.\n";
 
     #[test]
     fn digest_keeps_the_summary_and_the_revision_sections() {
         let short = digest(FULL_NOTE);
 
         assert!(short.starts_with("Стисла суть теми"));
+        assert!(short.contains("## Головне"));
+        assert!(short.contains("Відповідь одним абзацом"));
         assert!(short.contains("## Ключові терміни"));
         assert!(short.contains("## На чому підловлюють"));
         // The bulk of the note — the sections meant for a first read — is dropped.
         assert!(!short.contains("Довгий текст"));
         assert!(!short.contains("Ще довший текст"));
         assert!(short.len() < FULL_NOTE.len());
+    }
+
+    #[test]
+    fn digest_leads_with_the_one_paragraph_answer() {
+        let short = digest(FULL_NOTE);
+        let core = short.find("## Головне").unwrap();
+        assert!(core < short.find("## Ключові терміни").unwrap());
+    }
+
+    #[test]
+    fn digest_of_a_note_written_before_the_answer_existed_still_works() {
+        let older = FULL_NOTE.replace(
+            "## Головне\n\nВідповідь одним абзацом, яку студент написав би на екзамені.\n\n",
+            "",
+        );
+        let short = digest(&older);
+        assert!(short.starts_with("Стисла суть теми"));
+        assert!(!short.contains("## Головне"));
+        assert!(short.contains("## Ключові терміни"));
     }
 
     #[test]

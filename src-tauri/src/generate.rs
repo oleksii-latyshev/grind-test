@@ -48,6 +48,9 @@ struct KeyTerm {
 #[derive(Debug, Deserialize)]
 struct KnowledgeDraft {
     summary: String,
+    /// The topic answered in one paragraph. Defaulted because notes predate the field.
+    #[serde(default)]
+    exam_answer: String,
     markdown: String,
     #[serde(default)]
     key_terms: Vec<KeyTerm>,
@@ -61,6 +64,14 @@ impl KnowledgeDraft {
         let mut body = String::new();
         body.push_str(self.summary.trim());
         body.push_str("\n\n");
+        // Directly under the summary, and above the note proper, because this is what the
+        // condensed reading leads with — see `knowledge::digest`.
+        if !self.exam_answer.trim().is_empty() {
+            body.push_str(knowledge::CORE_HEADING);
+            body.push_str("\n\n");
+            body.push_str(self.exam_answer.trim());
+            body.push_str("\n\n");
+        }
         body.push_str(self.markdown.trim());
 
         if !self.key_terms.is_empty() {
