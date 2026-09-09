@@ -199,10 +199,11 @@ it through `state.vault()`, never a stored copy. When file access fails, report 
 `paths::describe_vault` separates a denied macOS permission from a wrong folder, and the UI
 depends on that distinction. Never let a permission error surface as an empty subject list.
 
-Subjects are the syllabus filenames: `f2`, `f3`, `f7` (252 topics total). A topic id is
-`<subject>/<section-index>.<position>`, e.g. `f3/2.7`.
+A subject id is its syllabus filename — `syllabus/demo.md` is subject `demo`. A topic id is
+`<subject>/<section-index>.<position>`, e.g. `demo/2.7`. Real subject ids and topic titles
+belong in the vault, never in this repository: fixtures and examples here are invented.
 
-Numbering in a syllabus may be nested — f7's section 1.7 lists `1.` as a group heading with
+Numbering in a syllabus may be nested — a section can list `1.` as a group heading with
 `1.1.`…`1.8.` beneath it. `split_numbered` therefore parses the **whole** numeric prefix, and
 `index` is the topic's position within its section, not the number printed next to it. A
 group heading is not a topic; it is recorded as `Topic::group` and passed to the knowledge
@@ -267,7 +268,7 @@ bun run dev            # vite only
 bun run tauri dev      # full app
 bun run build          # tsc + vite build
 cd src-tauri && cargo check
-cd src-tauri && cargo run --bin grind -- knowledge --subject f3
-cd src-tauri && cargo run --bin grind -- session --subject f7 --size 2
-cd src-tauri && cargo run --bin grind -- session-finish --subject f7 --session <id> --answers a.json
+cd src-tauri && cargo run --bin grind -- knowledge --subject demo
+cd src-tauri && cargo run --bin grind -- session --subject demo --size 2
+cd src-tauri && cargo run --bin grind -- session-finish --subject demo --session <id> --answers a.json
 ```

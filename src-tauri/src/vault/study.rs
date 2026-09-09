@@ -390,7 +390,7 @@ mod tests {
     fn topic(id: &str) -> Topic {
         Topic {
             id: id.into(),
-            subject: "f7".into(),
+            subject: "demo".into(),
             section: 1,
             section_title: "s".into(),
             index: 1,
@@ -412,14 +412,14 @@ mod tests {
 
     #[test]
     fn planning_puts_due_reviews_before_new_material() {
-        let topics: Vec<Topic> = (1..=5).map(|i| topic(&format!("f7/1.{i}"))).collect();
+        let topics: Vec<Topic> = (1..=5).map(|i| topic(&format!("demo/1.{i}"))).collect();
         let refs: Vec<&Topic> = topics.iter().collect();
 
         let mut state = StudyState::default();
         state.topics.insert(
-            "f7/1.4".into(),
+            "demo/1.4".into(),
             TopicStudy {
-                topic_id: "f7/1.4".into(),
+                topic_id: "demo/1.4".into(),
                 level: 2,
                 sessions: 1,
                 due_at: Some((chrono::Utc::now() - chrono::Duration::days(1)).to_rfc3339()),
@@ -429,22 +429,22 @@ mod tests {
 
         let planned = plan_session(&state, &refs, 3);
         assert_eq!(planned.len(), 3);
-        assert_eq!(planned[0].topic.id, "f7/1.4");
+        assert_eq!(planned[0].topic.id, "demo/1.4");
         assert!(planned[0].is_review);
         // The rest is fresh material, taken in syllabus order.
-        assert_eq!(planned[1].topic.id, "f7/1.1");
-        assert_eq!(planned[2].topic.id, "f7/1.2");
+        assert_eq!(planned[1].topic.id, "demo/1.1");
+        assert_eq!(planned[2].topic.id, "demo/1.2");
     }
 
     #[test]
     fn a_topic_not_yet_due_is_left_alone() {
-        let topics = vec![topic("f7/1.1")];
+        let topics = vec![topic("demo/1.1")];
         let refs: Vec<&Topic> = topics.iter().collect();
         let mut state = StudyState::default();
         state.topics.insert(
-            "f7/1.1".into(),
+            "demo/1.1".into(),
             TopicStudy {
-                topic_id: "f7/1.1".into(),
+                topic_id: "demo/1.1".into(),
                 level: 3,
                 sessions: 1,
                 due_at: Some((chrono::Utc::now() + chrono::Duration::days(5)).to_rfc3339()),
@@ -456,15 +456,15 @@ mod tests {
 
     #[test]
     fn a_sprint_covers_new_ground_before_repeating_anything() {
-        let topics: Vec<Topic> = (1..=5).map(|i| topic(&format!("f7/1.{i}"))).collect();
+        let topics: Vec<Topic> = (1..=5).map(|i| topic(&format!("demo/1.{i}"))).collect();
         let refs: Vec<&Topic> = topics.iter().collect();
 
         let mut state = StudyState::default();
         // Studied, and overdue — the ladder would serve it first; a sprint should not.
         state.topics.insert(
-            "f7/1.1".into(),
+            "demo/1.1".into(),
             TopicStudy {
-                topic_id: "f7/1.1".into(),
+                topic_id: "demo/1.1".into(),
                 level: 1,
                 sessions: 1,
                 last_score: Some(50),
@@ -475,16 +475,16 @@ mod tests {
 
         let planned = plan_sprint(&state, &refs, 3);
         let ids: Vec<&str> = planned.iter().map(|entry| entry.topic.id.as_str()).collect();
-        assert_eq!(ids, ["f7/1.2", "f7/1.3", "f7/1.4"]);
+        assert_eq!(ids, ["demo/1.2", "demo/1.3", "demo/1.4"]);
     }
 
     #[test]
     fn a_sprint_falls_back_to_the_weakest_once_everything_is_seen() {
-        let topics: Vec<Topic> = (1..=3).map(|i| topic(&format!("f7/1.{i}"))).collect();
+        let topics: Vec<Topic> = (1..=3).map(|i| topic(&format!("demo/1.{i}"))).collect();
         let refs: Vec<&Topic> = topics.iter().collect();
 
         let mut state = StudyState::default();
-        for (id, score) in [("f7/1.1", 90), ("f7/1.2", 30), ("f7/1.3", 60)] {
+        for (id, score) in [("demo/1.1", 90), ("demo/1.2", 30), ("demo/1.3", 60)] {
             state.topics.insert(
                 id.into(),
                 TopicStudy {
@@ -499,12 +499,12 @@ mod tests {
 
         let planned = plan_sprint(&state, &refs, 2);
         let ids: Vec<&str> = planned.iter().map(|entry| entry.topic.id.as_str()).collect();
-        assert_eq!(ids, ["f7/1.2", "f7/1.3"]);
+        assert_eq!(ids, ["demo/1.2", "demo/1.3"]);
     }
 
     #[test]
     fn a_spread_takes_one_topic_from_each_part_of_the_syllabus() {
-        let topics: Vec<Topic> = (1..=12).map(|i| topic(&format!("f3/1.{i}"))).collect();
+        let topics: Vec<Topic> = (1..=12).map(|i| topic(&format!("demo/1.{i}"))).collect();
         let refs: Vec<&Topic> = topics.iter().collect();
         let state = StudyState::default();
 
@@ -530,12 +530,12 @@ mod tests {
 
     #[test]
     fn a_spread_prefers_the_weakest_topic_in_its_slice() {
-        let topics: Vec<Topic> = (1..=4).map(|i| topic(&format!("f3/1.{i}"))).collect();
+        let topics: Vec<Topic> = (1..=4).map(|i| topic(&format!("demo/1.{i}"))).collect();
         let refs: Vec<&Topic> = topics.iter().collect();
 
         let mut state = StudyState::default();
         // Everything in the first half is known cold except 1.2.
-        for (id, score) in [("f3/1.1", 100), ("f3/1.2", 10), ("f3/1.3", 100), ("f3/1.4", 100)] {
+        for (id, score) in [("demo/1.1", 100), ("demo/1.2", 10), ("demo/1.3", 100), ("demo/1.4", 100)] {
             state.topics.insert(
                 id.into(),
                 TopicStudy {
@@ -549,7 +549,7 @@ mod tests {
         }
 
         let picks = (0..200)
-            .filter(|_| plan_spread(&state, &refs, 2)[0].topic.id == "f3/1.2")
+            .filter(|_| plan_spread(&state, &refs, 2)[0].topic.id == "demo/1.2")
             .count();
         // 1.2 carries weight 2.1 against 1.1's 0.3, so it should dominate its slice.
         assert!(picks > 120, "weak topic picked only {picks}/200 times");
@@ -557,34 +557,34 @@ mod tests {
 
     #[test]
     fn a_spread_of_everything_returns_everything() {
-        let topics: Vec<Topic> = (1..=3).map(|i| topic(&format!("f3/1.{i}"))).collect();
+        let topics: Vec<Topic> = (1..=3).map(|i| topic(&format!("demo/1.{i}"))).collect();
         let refs: Vec<&Topic> = topics.iter().collect();
         assert_eq!(plan_spread(&StudyState::default(), &refs, 5).len(), 3);
     }
 
     #[test]
     fn overview_counts_stages_and_progress() {
-        let topics: Vec<Topic> = (1..=4).map(|i| topic(&format!("f7/1.{i}"))).collect();
+        let topics: Vec<Topic> = (1..=4).map(|i| topic(&format!("demo/1.{i}"))).collect();
         let refs: Vec<&Topic> = topics.iter().collect();
         let mut state = StudyState::default();
         state.topics.insert(
-            "f7/1.1".into(),
+            "demo/1.1".into(),
             TopicStudy {
-                topic_id: "f7/1.1".into(),
+                topic_id: "demo/1.1".into(),
                 level: MAX_LEVEL,
                 ..Default::default()
             },
         );
         state.topics.insert(
-            "f7/1.2".into(),
+            "demo/1.2".into(),
             TopicStudy {
-                topic_id: "f7/1.2".into(),
+                topic_id: "demo/1.2".into(),
                 level: 1,
                 ..Default::default()
             },
         );
 
-        let view = overview(&state, "f7", &refs);
+        let view = overview(&state, "demo", &refs);
         assert_eq!(view.available, 4);
         assert_eq!(view.new, 2);
         assert_eq!(view.mastered, 1);

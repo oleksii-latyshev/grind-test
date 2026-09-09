@@ -51,7 +51,7 @@ enum Command {
     Knowledge {
         #[arg(short, long)]
         subject: String,
-        /// Specific topic ids, e.g. `f3/2.7`. Defaults to the whole subject.
+        /// Specific topic ids, e.g. `demo/2.7`. Defaults to the whole subject.
         #[arg(short, long = "topic")]
         topics: Vec<String>,
         /// Stop after this many topics — useful for a cheap smoke test.
@@ -81,7 +81,7 @@ enum Command {
     },
     /// Grade a session started with `session`, from a JSON file of answers.
     ///
-    /// The file looks like `{"open": {"f7/1.1": "..."}, "quiz": {"q1": [0], "q2": [1, 3]}}`.
+    /// The file looks like `{"open": {"demo/1.1": "..."}, "quiz": {"q1": [0], "q2": [1, 3]}}`.
     SessionFinish {
         #[arg(short, long)]
         subject: String,

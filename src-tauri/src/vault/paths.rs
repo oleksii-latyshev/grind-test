@@ -155,7 +155,7 @@ impl Vault {
         self.root.join("progress").join("sessions")
     }
 
-    /// `vault/knowledge/f3/02.07-modeli-podannia-znan.md`
+    /// `vault/knowledge/<subject>/02.07-nazva-temy.md`
     ///
     /// The `section.topic` prefix keeps directory order aligned with the syllabus and stays
     /// stable when unrelated topics are added.
@@ -248,10 +248,12 @@ mod tests {
 
     #[test]
     fn slugifies_ukrainian() {
-        assert_eq!(slugify("Моделі подання знань"), "modeli-podannia-znan");
+        assert_eq!(slugify("Приклад назви теми"), "pryklad-nazvy-temy");
+        // An ASCII abbreviation survives; the separator it leaves behind is collapsed into
+        // the one the following space would have produced.
         assert_eq!(
-            slugify("ACID- властивості транзакцій"),
-            "acid-vlastyvosti-tranzaktsii"
+            slugify("HTTP- запити та відповіді"),
+            "http-zapyty-ta-vidpovidi"
         );
         assert_eq!(slugify("  ---  "), "");
     }

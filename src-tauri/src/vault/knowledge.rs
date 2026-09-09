@@ -254,10 +254,11 @@ mod tests {
     #[test]
     fn round_trips_front_matter() {
         let note = KnowledgeNote {
-            topic_id: "f3/2.7".into(),
-            subject: "f3".into(),
-            title: "Моделі подання знань: \"фрейми\"".into(),
-            section_title: "Штучний інтелект".into(),
+            topic_id: "demo/2.7".into(),
+            subject: "demo".into(),
+            // The quotes are the point: the title goes through YAML escaping.
+            title: "Назва теми з \"лапками\"".into(),
+            section_title: "Перший розділ".into(),
             model: "gemini-3.1-pro-high".into(),
             generated_at: "2026-09-07T00:00:00Z".into(),
             body: "## Суть\n\nТекст.".into(),

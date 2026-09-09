@@ -315,7 +315,7 @@ mod tests {
     fn topic(id: &str) -> Topic {
         Topic {
             id: id.into(),
-            subject: "f3".into(),
+            subject: "demo".into(),
             section: 1,
             section_title: "s".into(),
             index: 1,

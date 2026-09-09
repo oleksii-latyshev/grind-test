@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use super::paths::Vault;
 
-/// One exam topic, e.g. `f3/2.7`.
+/// One exam topic, e.g. `demo/2.7`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Topic {
     pub id: String,
@@ -16,7 +16,7 @@ pub struct Topic {
     /// actually identifies a topic.
     pub index: usize,
     pub title: String,
-    /// Heading of the numbered group a nested topic belongs to, e.g. "Цифрові компоненти".
+    /// Heading of the numbered group a nested topic belongs to, e.g. "Перша група".
     #[serde(default)]
     pub group: Option<String>,
 }
@@ -30,7 +30,7 @@ pub struct Section {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Subject {
-    /// Syllabus filename without extension: `f2`, `f3`, `f7`.
+    /// Syllabus filename without extension, e.g. `demo` for `syllabus/demo.md`.
     pub id: String,
     pub title: String,
     pub sections: Vec<Section>,
@@ -234,48 +234,50 @@ fn split_numbered(line: &str) -> Option<(Vec<usize>, &str)> {
 mod tests {
     use super::*;
 
-    const SAMPLE: &str = "# ТЕМАТИКА ПИТАНЬ\n\n## I. Основи\n\n1. Перша тема.\n2. Друга тема\nз продовженням.\n\n## II. Друге\n\n1. Інша тема.\n";
+    // Invented throughout: these fixtures exercise the grammar, so nothing is gained by
+    // borrowing a real syllabus, and a repository is a poor place to keep one.
+    const SAMPLE: &str = "# Тестовий силабус\n\n## I. Перший розділ\n\n1. Перша тема.\n2. Друга тема\nз продовженням.\n\n## II. Другий розділ\n\n1. Третя тема.\n";
 
-    const NESTED: &str = "# T\n\n## 1.7 Компоненти\n\n1. Цифрові компоненти\n   1.1. Типи вузлів.\n   1.2. ВІМС.\n2. Аналогові компоненти.\n   2.1. Операційні підсилювачі.\n";
+    const NESTED: &str = "# T\n\n## 1.7 Розділ із групами\n\n1. Перша група\n   1.1. Підтема одна.\n   1.2. Підтема два.\n2. Друга група.\n   2.1. Підтема три.\n";
 
     #[test]
     fn parses_sections_and_topics() {
-        let s = parse("f2", SAMPLE);
-        assert_eq!(s.title, "ТЕМАТИКА ПИТАНЬ");
+        let s = parse("demo", SAMPLE);
+        assert_eq!(s.title, "Тестовий силабус");
         assert_eq!(s.sections.len(), 2);
         assert_eq!(s.topic_count(), 3);
         assert_eq!(s.sections[0].topics[1].title, "Друга тема з продовженням.");
-        assert_eq!(s.sections[1].topics[0].id, "f2/2.1");
-        assert_eq!(s.find_topic("f2/1.1").unwrap().title, "Перша тема.");
+        assert_eq!(s.sections[1].topics[0].id, "demo/2.1");
+        assert_eq!(s.find_topic("demo/1.1").unwrap().title, "Перша тема.");
     }
 
     #[test]
     fn ignores_content_before_first_section() {
-        let s = parse("f2", "# T\n\n1. orphan\n\n## A\n\n1. kept\n");
+        let s = parse("demo", "# T\n\n1. orphan\n\n## A\n\n1. kept\n");
         assert_eq!(s.topic_count(), 1);
     }
 
-    /// Nested numbering used to collapse `1.1.`, `1.2.` and `2.1.` onto the ids `f7/1.1`
-    /// and `f7/1.2`, so their knowledge notes overwrote each other.
+    /// Nested numbering used to collapse `1.1.`, `1.2.` and `2.1.` onto the ids `demo/1.1`
+    /// and `demo/1.2`, so their knowledge notes overwrote each other.
     #[test]
     fn nested_numbering_produces_distinct_topics() {
-        let s = parse("f7", NESTED);
+        let s = parse("demo", NESTED);
         let topics: Vec<&Topic> = s.topics().collect();
 
         assert_eq!(topics.len(), 3);
         let ids: Vec<&str> = topics.iter().map(|t| t.id.as_str()).collect();
-        assert_eq!(ids, ["f7/1.1", "f7/1.2", "f7/1.3"]);
+        assert_eq!(ids, ["demo/1.1", "demo/1.2", "demo/1.3"]);
 
         // The group heading is context, not a topic of its own.
-        assert_eq!(topics[0].title, "Типи вузлів.");
-        assert_eq!(topics[0].group.as_deref(), Some("Цифрові компоненти"));
-        assert_eq!(topics[2].title, "Операційні підсилювачі.");
-        assert_eq!(topics[2].group.as_deref(), Some("Аналогові компоненти."));
+        assert_eq!(topics[0].title, "Підтема одна.");
+        assert_eq!(topics[0].group.as_deref(), Some("Перша група"));
+        assert_eq!(topics[2].title, "Підтема три.");
+        assert_eq!(topics[2].group.as_deref(), Some("Друга група."));
     }
 
     #[test]
     fn a_flat_section_keeps_its_printed_numbering() {
-        let s = parse("f2", SAMPLE);
+        let s = parse("demo", SAMPLE);
         for section in &s.sections {
             for (position, topic) in section.topics.iter().enumerate() {
                 assert_eq!(topic.index, position + 1);

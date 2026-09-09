@@ -162,7 +162,7 @@ mod tests {
     fn question(correct: Vec<usize>) -> Question {
         Question {
             id: "q1".into(),
-            topic_id: "f3/1.1".into(),
+            topic_id: "demo/1.1".into(),
             kind: QuestionKind::Multi,
             question: "?".into(),
             options: vec!["a".into(), "b".into(), "c".into(), "d".into()],

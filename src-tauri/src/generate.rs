@@ -110,8 +110,8 @@ fn knowledge_prompt(subject: &Subject, topic: &Topic) -> String {
         })
         .unwrap_or_default();
 
-    // A nested topic reads as a fragment without the group heading above it
-    // ("Операційні підсилювачі" under "Аналогові компоненти").
+    // A nested topic reads as a fragment without the group heading above it — a subtopic
+    // named only "Types of nodes" means nothing until you know which group it sits under.
     let group = topic
         .group
         .as_deref()
@@ -602,7 +602,7 @@ mod tests {
 
     fn draft(options: Vec<&str>, correct: Vec<usize>) -> QuestionDraft {
         QuestionDraft {
-            topic_id: "f3/1.1".into(),
+            topic_id: "demo/1.1".into(),
             kind: QuestionKind::Single,
             question: "Питання?".into(),
             options: options.into_iter().map(String::from).collect(),
@@ -614,7 +614,7 @@ mod tests {
 
     #[test]
     fn drops_unanswerable_questions() {
-        let topics = vec!["f3/1.1".to_string()];
+        let topics = vec!["demo/1.1".to_string()];
         let kept = sanitize_questions(
             vec![
                 draft(vec!["a", "b", "c", "d"], vec![1]),
@@ -631,18 +631,18 @@ mod tests {
 
     #[test]
     fn infers_kind_from_the_answer_shape() {
-        let topics = vec!["f3/1.1".to_string()];
+        let topics = vec!["demo/1.1".to_string()];
         let kept = sanitize_questions(vec![draft(vec!["a", "b", "c", "d"], vec![0, 2])], &topics);
         assert!(matches!(kept[0].kind, QuestionKind::Multi));
     }
 
     #[test]
     fn unknown_topic_ids_fall_back_to_a_real_one() {
-        let topics = vec!["f3/1.1".to_string()];
+        let topics = vec!["demo/1.1".to_string()];
         let mut d = draft(vec!["a", "b", "c", "d"], vec![0]);
         d.topic_id = "made/up".into();
         let kept = sanitize_questions(vec![d], &topics);
-        assert_eq!(kept[0].topic_id, "f3/1.1");
+        assert_eq!(kept[0].topic_id, "demo/1.1");
     }
 }
 
