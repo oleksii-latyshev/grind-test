@@ -1,0 +1,83 @@
+# The packaging matrix, called by both `build` (every push) and `release` (every tag), so
+# what a release ships is byte-for-byte the process CI already exercises.
+name: app-build
+
+on:
+  workflow_call:
+    inputs:
+      retention-days:
+        description: How long to keep the uploaded artifacts.
+        type: number
+        default: 14
+
+jobs:
+  app:
+    name: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # One universal binary rather than a runner per architecture: GitHub retired the
+          # `macos-13` Intel image, and a universal build covers both Macs from one leg.
+          - label: macOS (universal)
+            os: macos-latest
+            rust-target: universal-apple-darwin
+            toolchain-targets: aarch64-apple-darwin,x86_64-apple-darwin
+            artifact: grind-test-macos
+          - label: Windows
+            os: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+            toolchain-targets: x86_64-pc-windows-msvc
+            artifact: grind-test-windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.toolchain-targets }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: bun install --frozen-lockfile
+
+      - name: Rust tests
+        working-directory: src-tauri
+        run: cargo test --lib
+
+      - name: Build the app
+        run: bun run tauri build --target ${{ matrix.rust-target }}
+
+      # `upload-artifact` does not preserve the executable bit, which would leave the
+      # unpacked .app unable to launch. `ditto` produces the same archive format the App
+      # Store tooling uses and keeps the bundle intact. The .dmg needs no such care.
+      - name: Pack the macOS app
+        if: runner.os == 'macOS'
+        run: |
+          ditto -c -k --keepParent \
+            "src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos/grind-test.app" \
+            "${{ matrix.artifact }}.zip"
+
+      - name: Upload macOS build
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.artifact }}.zip
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/dmg/*.dmg
+          retention-days: ${{ inputs.retention-days }}
+          if-no-files-found: error
+
+      - name: Upload Windows installer
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: src-tauri/target/${{ matrix.rust-target }}/release/bundle/nsis/*-setup.exe
+          retention-days: ${{ inputs.retention-days }}
+          if-no-files-found: error

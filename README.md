@@ -110,11 +110,12 @@ system panel is an explicit grant.
 
 Architecture details live in [CLAUDE.md](CLAUDE.md).
 
-## CI
+## CI and releases
 
 `.github/workflows/build.yml` runs on every push to `main`, on pull requests, and on demand.
-A fast `typecheck` job (`tsc` + `vite build`, no Rust) gates a build matrix that runs the Rust
-tests and then packages the app for macOS arm64, macOS x64 and Windows x64.
+A fast `typecheck` job (`tsc` + `vite build`, no Rust) gates the packaging matrix in
+`app-build.yml`, which runs the Rust tests and then builds for macOS (universal) and
+Windows x64.
 
 Download a build from the run's **Artifacts** section:
 
@@ -130,5 +131,15 @@ Builds are unsigned, so macOS shows an unidentified-developer warning on a downl
 (right-click → Open, once). A CI build has no repository beside it, so it starts with an empty
 vault — point it at yours with **Обрати теку сховища**.
 
-For public distribution the usual next step is a tag-triggered job that uploads the same
-bundles to a GitHub Release; this workflow deliberately stops at artifacts.
+Pushing a `v*` tag runs `release.yml`, which calls the same `app-build.yml` matrix — so a
+release ships exactly what CI already exercises — and publishes the bundles to a GitHub
+Release with notes generated from the commits since the previous tag. It refuses to publish
+when the tag disagrees with `version` in `tauri.conf.json`, since that would ship an
+installer whose "about" box names the wrong version.
+
+```bash
+# bump `version` in src-tauri/tauri.conf.json and package.json first
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+`workflow_dispatch` re-runs a release for an existing tag, e.g. after a runner failure.

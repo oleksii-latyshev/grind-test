@@ -1,0 +1,74 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  # Re-run a release without moving the tag, e.g. after a runner failure.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build and publish, e.g. v0.2.0
+        required: true
+        type: string
+
+jobs:
+  check:
+    name: version matches the tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      # A tag that disagrees with the manifest ships an installer whose "about" box lies
+      # about which version it is. Cheaper to catch here than after publishing.
+      - name: tauri.conf.json version equals the tag
+        run: |
+          tag="${{ inputs.tag || github.ref_name }}"
+          version=$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' src-tauri/tauri.conf.json | head -1)
+          if [ "$tag" != "v$version" ]; then
+            echo "::error::tag $tag does not match version $version in src-tauri/tauri.conf.json"
+            exit 1
+          fi
+
+  build:
+    needs: check
+    uses: ./.github/workflows/app-build.yml
+    with:
+      # A published release keeps the files itself; the run artifacts are only the handover.
+      retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: bundles
+
+      # Artifacts arrive one directory per matrix leg; the release wants a flat list.
+      - name: Collect the bundles
+        run: |
+          mkdir -p release
+          find bundles -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.zip' \) \
+            -exec mv {} release/ \;
+          ls -la release
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          files: release/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            Builds are unsigned. macOS will refuse a downloaded build on first open —
+            right-click the app and choose **Open** once, or run
+            `xattr -dr com.apple.quarantine /Applications/grind-test.app`.
+
+            | File | Platform |
+            |---|---|
+            | `.dmg` | macOS, universal (Apple Silicon + Intel) |
+            | `grind-test-macos.zip` | the same `.app`, unpacked |
+            | `*-setup.exe` | Windows x64 |
