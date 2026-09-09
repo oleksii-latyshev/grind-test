@@ -36,6 +36,12 @@ Cost per session is fixed at **two model calls**: one fast call producing the op
 (with an `expected_points` rubric) and the whole mini-quiz together, one smart call grading
 every written answer at once. Never grade answers one call at a time.
 
+Starting a session is split so nobody waits for material that is already on disk.
+`plan_session` picks the topics and loads the notes — disk only, returns at once — and
+`prepare_questions` is the fast call, fired by the client as the first note opens and
+finishing while it is read. An empty `quiz` is what marks a plan as not yet prepared;
+`prepare_questions` is idempotent, so a resumed session never pays twice.
+
 `SessionMode` picks the trade-off, cutting the two costly halves — reading the note and
 writing the answer — in that order:
 

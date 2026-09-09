@@ -114,8 +114,10 @@ export function StudyTab({ detail, onSessionStart }: Props) {
   async function start() {
     setStarting(true);
     try {
+      // Disk only: this returns before any model call, so the reader opens at once and the
+      // question generation runs behind the first note.
       onSessionStart(
-        await api.startStudySession({
+        await api.planStudySession({
           subjectId: detail.subject.id,
           size: pick === "manual" ? chosen.length : size,
           mode: pace,

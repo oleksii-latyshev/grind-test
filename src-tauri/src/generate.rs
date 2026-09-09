@@ -777,12 +777,15 @@ pub struct SessionPlan {
     pub quiz: Vec<Question>,
 }
 
-/// Build a session: pick topics, load their notes, and generate the open questions and the
-/// mini-quiz in a single fast-model call.
+/// Pick the topics for a session and load what the student will read. Disk only.
+///
+/// Deliberately separated from the generation call below: the notes are already on disk, so
+/// there is no reason to make anyone watch a spinner for material that is sitting there. The
+/// reader opens on this, and the model call runs while the first note is being read.
 ///
 /// `topic_ids` overrides the scheduler — the student can insist on the topics they know are
 /// coming up, rather than the ones the ladder would serve next.
-pub async fn start_session(
+pub fn plan_session(
     vault: &Vault,
     subject_id: &str,
     size: usize,
@@ -831,43 +834,87 @@ pub async fn start_session(
 
     let mut notes = Vec::new();
     let mut reading = Vec::new();
-    let mut knowledge_block = String::new();
-    for entry in &planned {
+    let mut topics = Vec::new();
+    for entry in planned {
         let Some(note) = knowledge::read(vault, &entry.topic)? else {
             continue;
         };
-        // The questions are generated from exactly what the student is shown, so a sprint
-        // can never be tested on material its digest left out.
-        let shown = if mode.reads_digest() {
+        // What the student is shown is decided here and stored, because the questions are
+        // generated from exactly this text — a sprint can never be tested on material its
+        // digest left out.
+        reading.push(if mode.reads_digest() {
             knowledge::digest(&note.body)
         } else {
             note.body.clone()
-        };
-        knowledge_block.push_str(&format!(
-            "### topic_id: {}\nТема: {}\n\n{}\n\n",
-            entry.topic.id,
-            entry.topic.title,
-            truncate_chars(&shown, SESSION_EXCERPT_CHARS)
-        ));
-        reading.push(shown);
+        });
         notes.push(note);
+        topics.push(entry);
     }
     if notes.is_empty() {
         bail!("could not load the knowledge notes for the planned topics");
     }
 
-    let quiz_count = (notes.len() * mode.questions_per_topic()).clamp(6, 32);
+    let now = chrono::Utc::now();
+    let plan = SessionPlan {
+        id: format!(
+            "{}-{}",
+            now.format("%Y%m%d-%H%M%S"),
+            &uuid::Uuid::new_v4().to_string()[..8]
+        ),
+        subject: subject_id.to_string(),
+        created_at: now.to_rfc3339(),
+        mode,
+        topics,
+        notes,
+        reading,
+        // Filled in by `prepare_questions`; empty is what marks a session as not yet ready.
+        open_questions: Vec::new(),
+        quiz: Vec::new(),
+    };
+    save_session(vault, &plan, None)?;
+    Ok(plan)
+}
+
+/// Generate the open questions and the mini-quiz for a planned session — the one fast call
+/// a session costs up front.
+///
+/// Idempotent: a session that already has its questions is returned untouched, so the client
+/// can fire this on every mount, including a resume, without paying for it twice.
+pub async fn prepare_questions(
+    vault: &Vault,
+    subject_id: &str,
+    session_id: &str,
+) -> Result<SessionPlan> {
+    let mut plan = load_session(vault, subject_id, session_id)?;
+    if !plan.quiz.is_empty() {
+        return Ok(plan);
+    }
+
+    let mut knowledge_block = String::new();
+    for (index, note) in plan.notes.iter().enumerate() {
+        // `reading` is written alongside `notes`; the fallback covers a session stored
+        // before that field existed.
+        let shown = plan.reading.get(index).unwrap_or(&note.body);
+        knowledge_block.push_str(&format!(
+            "### topic_id: {}\nТема: {}\n\n{}\n\n",
+            note.topic_id,
+            note.title,
+            truncate_chars(shown, SESSION_EXCERPT_CHARS)
+        ));
+    }
+
+    let quiz_count = (plan.notes.len() * plan.mode.questions_per_topic()).clamp(6, 32);
     let prompt = SESSION_PROMPT
-        .replace("{{NOTES_KIND}}", mode.notes_kind())
+        .replace("{{NOTES_KIND}}", plan.mode.notes_kind())
         .replace("{{KNOWLEDGE}}", &knowledge_block)
-        .replace("{{OPEN_STYLE}}", mode.open_style())
-        .replace("{{QUIZ_STYLE}}", mode.quiz_style())
+        .replace("{{OPEN_STYLE}}", plan.mode.open_style())
+        .replace("{{QUIZ_STYLE}}", plan.mode.quiz_style())
         .replace("{{QUIZ_COUNT}}", &quiz_count.to_string());
 
     let response =
         agy::run::<SessionDraft>(&prompt, ModelTier::Fast, SESSION_SCHEMA, QUIZ_TIMEOUT).await?;
 
-    let topic_ids: Vec<String> = notes.iter().map(|note| note.topic_id.clone()).collect();
+    let topic_ids: Vec<String> = plan.notes.iter().map(|note| note.topic_id.clone()).collect();
     let quiz = sanitize_questions(response.data.quiz_questions, &topic_ids);
     if quiz.is_empty() {
         bail!("the generator returned no usable quiz questions for this session");
@@ -875,7 +922,7 @@ pub async fn start_session(
 
     // One open question per topic, in the order the student read them; anything the model
     // invented for an unknown topic is dropped.
-    let open_questions: Vec<OpenQuestion> = topic_ids
+    plan.open_questions = topic_ids
         .iter()
         .filter_map(|topic_id| {
             response
@@ -890,28 +937,24 @@ pub async fn start_session(
                 })
         })
         .collect();
+    plan.quiz = quiz;
 
-    let now = chrono::Utc::now();
-    let plan = SessionPlan {
-        id: format!(
-            "{}-{}",
-            now.format("%Y%m%d-%H%M%S"),
-            &uuid::Uuid::new_v4().to_string()[..8]
-        ),
-        subject: subject_id.to_string(),
-        created_at: now.to_rfc3339(),
-        mode,
-        topics: planned
-            .into_iter()
-            .filter(|entry| topic_ids.contains(&entry.topic.id))
-            .collect(),
-        notes,
-        reading,
-        open_questions,
-        quiz,
-    };
     save_session(vault, &plan, None)?;
     Ok(plan)
+}
+
+/// Plan and prepare in one go. The GUI drives the two halves separately so the reading can
+/// start immediately; the terminal CLI has nobody to show a note to and just waits.
+pub async fn start_session(
+    vault: &Vault,
+    subject_id: &str,
+    size: usize,
+    topic_ids: Option<Vec<String>>,
+    mode: SessionMode,
+    selection: Selection,
+) -> Result<SessionPlan> {
+    let plan = plan_session(vault, subject_id, size, topic_ids, mode, selection)?;
+    prepare_questions(vault, subject_id, &plan.id).await
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

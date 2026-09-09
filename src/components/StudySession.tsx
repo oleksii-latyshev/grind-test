@@ -6,7 +6,9 @@ import {
   Loader2,
   PenLine,
   Repeat,
+  RotateCw,
   Sparkles,
+  TriangleAlert,
   X,
   Zap,
 } from "lucide-react";
@@ -22,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api, errorMessage } from "@/lib/api";
 import { clearDraft, readDraft, writeDraft } from "@/lib/drafts";
 import { STAGES, formatDue, scoreTone } from "@/lib/study";
+import { sessionReady } from "@/lib/types";
 import type { SessionPlan, SessionResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -39,30 +42,79 @@ interface Props {
   onFinished: () => void;
 }
 
-export function StudySession({ plan, onExit, onFinished }: Props) {
+export function StudySession({ plan: initial, onExit, onFinished }: Props) {
   const [step, setStep] = useState<Step>("read");
   const [readIndex, setReadIndex] = useState(0);
+  // The plan arrives with notes but usually without questions; the generation call runs
+  // behind the reading and replaces it here when it lands.
+  const [plan, setPlan] = useState(initial);
+  const [prepareError, setPrepareError] = useState<string | null>(null);
+  // Bumped by the retry button; re-runs the effect below without remounting the session.
+  const [retry, setRetry] = useState(0);
+  // Set when the last "До питань" was pressed before the questions were ready: reading is
+  // finished, so the only thing left to do is wait, and the step advances by itself.
+  const [waiting, setWaiting] = useState(false);
   // Restored from the local draft, so re-entering a session brings the typing back.
-  const [openAnswers, setOpenAnswers] = useState<Record<string, string>>(() => readDraft(plan.id));
+  const [openAnswers, setOpenAnswers] = useState<Record<string, string>>(() =>
+    readDraft(initial.id),
+  );
   const [quizSelections, setQuizSelections] = useState<Record<string, number[]>>({});
   const [result, setResult] = useState<SessionResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const ready = sessionReady(plan);
 
   useEffect(() => {
     writeDraft(plan.id, openAnswers);
   }, [plan.id, openAnswers]);
 
-  async function advanceReading() {
+  useEffect(() => {
+    setPlan(initial);
+  }, [initial]);
+
+  // One attempt per session, started as the first note opens. The command is idempotent, so
+  // a resumed session that already has its questions simply gets them back.
+  useEffect(() => {
+    if (sessionReady(initial)) return;
+    let cancelled = false;
+    setPrepareError(null);
+    api
+      .prepareSessionQuestions(initial.subject, initial.id)
+      .then((prepared) => {
+        if (!cancelled) setPlan(prepared);
+      })
+      .catch((error) => {
+        if (!cancelled) setPrepareError(errorMessage(error));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initial, retry]);
+
+  // The student pressed on past the last note before the call landed.
+  useEffect(() => {
+    if (waiting && ready) {
+      setWaiting(false);
+      setStep("open");
+      window.scrollTo({ top: 0 });
+    }
+  }, [waiting, ready]);
+
+  function advanceReading() {
     const topic = plan.topics[readIndex];
     // Fire and forget: a failed bookkeeping write must not block the session.
     api.markTopicRead(topic.topic.id).catch(() => {});
     if (readIndex + 1 < plan.topics.length) {
       setReadIndex((value) => value + 1);
       window.scrollTo({ top: 0 });
-    } else {
-      setStep("open");
-      window.scrollTo({ top: 0 });
+      return;
     }
+    if (!ready) {
+      // Nothing to show yet; the effect above moves on as soon as there is.
+      setWaiting(true);
+      return;
+    }
+    setStep("open");
+    window.scrollTo({ top: 0 });
   }
 
   function chooseOption(questionId: string, option: number, multi: boolean) {
@@ -171,11 +223,39 @@ export function StudySession({ plan, onExit, onFinished }: Props) {
               <ChevronLeft className="size-4" />
               Попередня
             </Button>
-            <Button onClick={advanceReading}>
-              {readIndex + 1 < plan.topics.length ? "Наступна тема" : "До питань"}
-              <ArrowRight className="size-4" />
-            </Button>
+            {prepareError && readIndex + 1 === plan.topics.length ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPrepareError(null);
+                  setRetry((value) => value + 1);
+                }}
+              >
+                <RotateCw className="size-4" />
+                Спробувати ще раз
+              </Button>
+            ) : (
+              <Button onClick={advanceReading} disabled={waiting}>
+                {waiting ? <Loader2 className="size-4 animate-spin" /> : null}
+                {readIndex + 1 < plan.topics.length
+                  ? "Наступна тема"
+                  : waiting
+                    ? "Готуємо питання…"
+                    : "До питань"}
+                {waiting ? null : <ArrowRight className="size-4" />}
+              </Button>
+            )}
           </div>
+
+          {prepareError ? (
+            <p className="mx-auto flex w-full max-w-3xl items-start gap-2 text-sm text-destructive">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+              <span>
+                Не вдалося згенерувати питання: {prepareError} Конспекти можна читати далі —
+                повторіть спробу, коли дочитаєте.
+              </span>
+            </p>
+          ) : null}
         </>
       ) : step === "open" ? (
         <section className="space-y-5">

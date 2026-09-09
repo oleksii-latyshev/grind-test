@@ -76,23 +76,32 @@ export const api = {
     invoke<Attempt[]>("list_attempts", { subjectId: subjectId ?? null }),
 
   /**
-   * Picks the topics, then generates the open questions and mini-quiz in one call.
+   * Picks the topics and loads their notes. Disk only — returns immediately, so the reader
+   * can open on the first note. The plan comes back with no questions yet.
+   *
    * Passing `topicIds` overrides the scheduler with an explicit choice.
    */
-  startStudySession: (options: {
+  planStudySession: (options: {
     subjectId: string;
     size: number;
     mode: SessionMode;
     selection?: Selection;
     topicIds?: string[];
   }) =>
-    invoke<SessionPlan>("start_study_session", {
+    invoke<SessionPlan>("plan_study_session", {
       subjectId: options.subjectId,
       size: options.size,
       mode: options.mode,
       selection: options.selection ?? "scheduled",
       topicIds: options.topicIds ?? null,
     }),
+
+  /**
+   * The one fast-model call a session costs, run while the student reads. Idempotent, so a
+   * resumed session can call it again without paying twice.
+   */
+  prepareSessionQuestions: (subjectId: string, sessionId: string) =>
+    invoke<SessionPlan>("prepare_session_questions", { subjectId, sessionId }),
 
   unfinishedSessions: (subjectId: string) =>
     invoke<SessionSummary[]>("unfinished_sessions", { subjectId }),

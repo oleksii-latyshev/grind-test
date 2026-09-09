@@ -226,8 +226,19 @@ export interface SessionPlan {
   notes: KnowledgeNote[];
   /** What to show per topic, aligned with `topics`: full note, or digest in a sprint. */
   reading: string[];
+  /** Empty until `prepare_session_questions` has run — see `sessionReady`. */
   open_questions: OpenQuestion[];
+  /** Empty until `prepare_session_questions` has run — see `sessionReady`. */
   quiz: Question[];
+}
+
+/**
+ * A session is ready once its questions exist. The generator refuses to return an empty
+ * quiz, so an empty one can only mean the call has not landed yet — no extra flag needed,
+ * and sessions stored before the split still read as ready.
+ */
+export function sessionReady(plan: SessionPlan): boolean {
+  return plan.quiz.length > 0;
 }
 
 export interface OpenGrading {

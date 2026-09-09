@@ -313,24 +313,41 @@ pub fn list_attempts(state: State<'_, AppState>, subject_id: Option<String>) -> 
 // study mode
 // ---------------------------------------------------------------------------
 
+/// Pick the topics and load their notes. Returns without calling a model, so the reader can
+/// open on the first note while `prepare_session_questions` runs behind it.
+///
+/// The returned plan has no questions yet — an empty `quiz` is what marks a session as not
+/// yet ready.
 #[tauri::command]
-pub async fn start_study_session(
-    app: tauri::AppHandle,
+pub fn plan_study_session(
+    state: State<'_, AppState>,
     subject_id: String,
     size: Option<usize>,
     topic_ids: Option<Vec<String>>,
     mode: Option<SessionMode>,
     selection: Option<Selection>,
 ) -> CmdResult<SessionPlan> {
-    let vault = app.state::<AppState>().vault();
-    generate::start_session(
-        &vault,
+    generate::plan_session(
+        &state.vault(),
         &subject_id,
         size.unwrap_or(3),
         topic_ids,
         mode.unwrap_or_default(),
         selection.unwrap_or_default(),
     )
+    .map_err(fail)
+}
+
+/// The one fast-model call a session costs. Idempotent, so the client may fire it on every
+/// mount — including when resuming a session that was abandoned before it finished.
+#[tauri::command]
+pub async fn prepare_session_questions(
+    app: tauri::AppHandle,
+    subject_id: String,
+    session_id: String,
+) -> CmdResult<SessionPlan> {
+    let vault = app.state::<AppState>().vault();
+    generate::prepare_questions(&vault, &subject_id, &session_id)
         .await
         .map_err(fail)
 }
