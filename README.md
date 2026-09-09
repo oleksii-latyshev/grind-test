@@ -1,8 +1,15 @@
 # grind-test
 
-A desktop app (macOS + Windows) for exam prep: it turns a list of exam topics into a
-personal knowledge base, generates practice quizzes from it, and remembers where you keep
-going wrong.
+<p align="center">
+  <img src="docs/screenshot.png" alt="The subjects screen: four exam subjects, each showing how many topics already have a study note, how many quizzes exist, and the running accuracy." width="900">
+</p>
+
+<p align="center">
+  A desktop app for exam prep. Give it your list of exam topics; it writes you a study note
+  for each one, walks you through them, and remembers what you keep getting wrong.
+</p>
+
+---
 
 ## How it works
 
@@ -13,42 +20,24 @@ vault/syllabus/<subject>.md      ← your topic list (one file per subject)
 vault/knowledge/<subject>/*.md   ← one study note per topic, generated once
         │  fast model + your answer history
         ▼
-vault/quizzes/<subject>/*.json   ← a quiz
-        │  you take it
+a study session                  ← read, answer in writing, mini-quiz
+        │  graded by the smart model
         ▼
-vault/progress/                  ← attempts + a mastery table that weights
-                                   topic selection for the next quiz
+vault/progress/                  ← a review schedule that decides what you see next
 ```
 
-Asking for a hint mid-quiz is a separate call to the smart model, grounded in that topic's
-study note; it never names the correct option.
+A **session** is the core of it: two to six topics, read the note, write an answer to one
+broad exam-style question per topic, then a mini-quiz. The written half is graded against a
+rubric — what you covered, what you missed — and counts for 60% of the topic's score. That
+score moves the topic along a Leitner ladder: 1 → 2 → 4 → 7 → 14 → 30 days.
 
-Study sessions come at three paces. **Full** works through the whole note and an essay-length
-written answer, the way the oral exam is scored. **Balanced** keeps the same note but takes
-the answer as a short list. **Sprint** also condenses the note down to the topic answered in
-one paragraph, its key terms and its common traps. The app estimates how long each pace would take to get through what is
-left.
+Three paces trade depth for coverage. **Full** takes the whole note and an essay-length
+answer. **Balanced** keeps the note and takes the answer as bullet points. **Sprint** also
+condenses the note to the topic answered in one paragraph, its key terms and its usual traps.
+The answer is always cut before the reading — you cannot recall a note you were never shown.
 
-Topics can be served by the review schedule, chosen by hand, or drawn **the way an exam paper
-draws them** — one from each part of the syllabus, at random, leaning toward the weakest.
-
-A pomodoro timer sits in the header, configurable and running across screens. It announces
-the end of a round and stops there — it never covers what you are reading.
-
-All generation goes through the [Antigravity](https://antigravity.google) CLI (`agy`). Jobs
-are split across two tiers — a smart one for study notes, grading and hints, a fast one for
-quizzes and session questions — and **Моделі** in the header picks which model each tier
-resolves to, from whatever `agy models` lists (Gemini, Claude and the rest). Which tier a job
-runs at is fixed: a study note is worth paying for, a quiz is not.
-
-A **Як це працює** page walks through the same pipeline in the app: it opens once after
-setup, with a skip, and stays available from the header.
-
-## Language
-
-The interface speaks Ukrainian, Russian or English — switch it in the header. The *content*
-does not follow: study notes, questions, explanations and hints are always Ukrainian, because
-that is the language of the exam. Code, comments, identifiers and documentation are English.
+Topics come from the review schedule, from you, or drawn **the way an exam paper draws
+them**: one from each part of the syllabus, leaning toward your weakest.
 
 ## Running it
 
@@ -57,89 +46,67 @@ bun install
 bun run tauri dev
 ```
 
-Requires `agy` on your `PATH` (or its path in the `GRIND_AGY_BIN` environment variable).
-A packaged macOS app does not inherit the shell `PATH`, so it falls back to
-`~/.local/bin/agy` and the Homebrew prefixes.
+Requires the [Antigravity](https://antigravity.google) CLI (`agy`) on your `PATH`, or its
+path in `GRIND_AGY_BIN`. All generation goes through it, split across two tiers — a smart
+model for notes, grading and hints, a fast one for quizzes and session questions. **Моделі**
+in the header picks which model each tier uses, from whatever `agy models` lists (Gemini,
+Claude and the rest). Which tier a job runs at is fixed: a study note is worth paying for, a
+quiz is not.
 
-To build the installable app:
+To build an installable app:
 
 ```bash
-bun run tauri build   # → src-tauri/target/release/bundle/macos/grind-test.app
+bun run tauri build
 ```
 
-Bundle targets are `app` + `dmg` + `nsis`; Tauri builds only the ones that apply to the host,
-so macOS produces the `.app` and the `.dmg` and Windows the installer. The dmg bundler drives
-Finder over AppleScript and so needs a GUI session — on a headless shell (ssh, a container)
-pass `--bundles app` instead.
+macOS gets a universal `.dmg` and the `.app`; Windows gets an NSIS installer. The dmg
+bundler drives Finder over AppleScript, so on a headless shell pass `--bundles app`.
 
-A debug build reads the `vault/` beside the checkout; a release build does not, because that
-path is baked in at compile time and would point at the build machine.
+## The vault
+
+Everything the app knows lives in one folder you choose: syllabi in, notes and results out,
+as ordinary markdown and JSON. On first launch it asks where — point at an existing folder,
+create a new one, or keep it inside the app's own data directory. Nothing on disk is read
+before you answer, so macOS never raises a folder prompt for somewhere you did not name.
+
+A syllabus is a markdown file: a title, sections under `##`, a numbered list of topics under
+each. The filename becomes the subject id. Creating a vault leaves a sample in it.
+
+`vault/` at the repo root is gitignored — it holds personal exam material.
 
 ## CLI for bulk jobs
 
-Filling the knowledge base for 250+ topics is easier from a terminal than from the GUI:
+Filling the knowledge base for 250+ topics is easier from a terminal than from the GUI, and
+it is resumable — topics that already have a note are skipped, so an interrupted run just
+gets started again.
 
 ```bash
 cd src-tauri
 cargo run --bin grind -- status
-cargo run --bin grind -- topics --subject f7 --missing
-cargo run --bin grind -- knowledge --subject f7 --concurrency 4
-cargo run --bin grind -- quiz --subject f7 --count 10
+cargo run --bin grind -- topics --subject cs1 --missing
+cargo run --bin grind -- knowledge --subject cs1 --concurrency 4
 ```
 
-Knowledge generation is resumable: topics that already have a note are skipped, so an
-interrupted run can simply be started again.
+## Language
 
-## The vault
-
-`vault/` is gitignored — it holds personal exam material and results.
-
-On first launch the app asks where to keep it — point at an existing folder, create a new
-vault, or keep it inside the app's own data directory. Nothing on disk is read before that
-answer, so macOS never raises a folder prompt for somewhere you did not name.
-
-After setup it resolves the vault in this order: `$GRIND_VAULT`, then the folder you picked,
-then a `vault/` directory next to the repository (debug builds only), then the app data dir.
-The choice is stored in the OS config directory, which is never gated behind file-access
-permission, so the app can always remember where the vault is even when it cannot currently
-read it.
-
-Use **Обрати теку сховища** on the subjects screen to point the app somewhere else. On macOS
-this is also the way back from a declined folder-access prompt: choosing a folder in the
-system panel is an explicit grant.
-
-Architecture details live in [CLAUDE.md](CLAUDE.md).
+The interface speaks Ukrainian, Russian or English — switch it in the header. The content
+does not follow: study notes, questions, explanations and hints are always Ukrainian, because
+that is the language of the exam.
 
 ## CI and releases
 
-`.github/workflows/build.yml` runs on every push to `main`, on pull requests, and on demand.
-A fast `typecheck` job (`tsc` + `vite build`, no Rust) gates the packaging matrix in
-`app-build.yml`, which runs the Rust tests and then builds for macOS (universal) and
-Windows x64.
-
-Download a build from the run's **Artifacts** section:
-
-| Artifact | Contents |
-|---|---|
-| `grind-test-macos` | universal `.dmg`, plus the `.app` zipped with `ditto` so the bundle stays executable |
-| `grind-test-windows-x64` | NSIS `*-setup.exe` |
-
-The macOS leg builds `universal-apple-darwin`, so one download covers Apple Silicon and
-Intel.
-
-Builds are unsigned, so macOS shows an unidentified-developer warning on a downloaded build
-(right-click → Open, once). A CI build has no repository beside it, so it starts with an empty
-vault — point it at yours with **Обрати теку сховища**.
-
-Pushing a `v*` tag runs `release.yml`, which calls the same `app-build.yml` matrix — so a
-release ships exactly what CI already exercises — and publishes the bundles to a GitHub
-Release with notes generated from the commits since the previous tag. It refuses to publish
-when the tag disagrees with `version` in `tauri.conf.json`, since that would ship an
-installer whose "about" box names the wrong version.
+Every push runs a typecheck, the Rust tests, and a full package for macOS and Windows.
+Pushing a `v*` tag runs the same matrix and publishes the bundles to a GitHub Release.
 
 ```bash
 # bump `version` in src-tauri/tauri.conf.json and package.json first
 git tag v0.2.0 && git push origin v0.2.0
 ```
 
-`workflow_dispatch` re-runs a release for an existing tag, e.g. after a runner failure.
+Builds are unsigned, so macOS refuses a downloaded one on first open — right-click → **Open**,
+once.
+
+---
+
+Architecture and conventions live in [CLAUDE.md](CLAUDE.md); what is planned and why is in
+[ROADMAP.md](ROADMAP.md).
