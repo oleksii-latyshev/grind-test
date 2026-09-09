@@ -62,8 +62,8 @@ so macOS produces the `.app` and the `.dmg` and Windows the installer. The dmg b
 Finder over AppleScript and so needs a GUI session — on a headless shell (ssh, a container)
 pass `--bundles app` instead.
 
-Note that the dev-time vault path is baked in at compile time, so a build made from this
-checkout keeps reading the `vault/` beside it. Move the repository and you have to rebuild.
+A debug build reads the `vault/` beside the checkout; a release build does not, because that
+path is baked in at compile time and would point at the build machine.
 
 ## CLI for bulk jobs
 
@@ -84,10 +84,15 @@ interrupted run can simply be started again.
 
 `vault/` is gitignored — it holds personal exam material and results.
 
-The app resolves it in this order: `$GRIND_VAULT`, then the folder you picked inside the app,
-then a `vault/` directory next to the repository, then the app data dir. The choice is stored
-in the OS config directory, which is never gated behind file-access permission, so the app
-can always remember where the vault is even when it cannot currently read it.
+On first launch the app asks where to keep it — point at an existing folder, create a new
+vault, or keep it inside the app's own data directory. Nothing on disk is read before that
+answer, so macOS never raises a folder prompt for somewhere you did not name.
+
+After setup it resolves the vault in this order: `$GRIND_VAULT`, then the folder you picked,
+then a `vault/` directory next to the repository (debug builds only), then the app data dir.
+The choice is stored in the OS config directory, which is never gated behind file-access
+permission, so the app can always remember where the vault is even when it cannot currently
+read it.
 
 Use **Обрати теку сховища** on the subjects screen to point the app somewhere else. On macOS
 this is also the way back from a declined folder-access prompt: choosing a folder in the

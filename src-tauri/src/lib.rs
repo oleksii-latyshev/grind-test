@@ -27,6 +27,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::vault_info,
             commands::choose_vault,
+            commands::create_vault,
+            commands::use_default_vault,
             commands::list_subjects,
             commands::get_subject,
             commands::get_knowledge,

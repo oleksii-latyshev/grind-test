@@ -3,7 +3,14 @@ use std::path::{Path, PathBuf};
 /// Resolve the vault root.
 ///
 /// `$GRIND_VAULT` wins, then the folder the user picked in the app, then a `vault` directory
-/// next to the repo (dev), then the caller-supplied fallback (the app data dir).
+/// next to the repo, then the caller-supplied fallback (the app data dir).
+///
+/// The repo probe is debug-only on purpose. `CARGO_MANIFEST_DIR` is baked in at compile
+/// time, so in a packaged build it names a folder on the *developer's* machine — often under
+/// Desktop or Documents. Calling `is_dir()` on it is enough to make macOS raise a
+/// folder-access prompt on first launch, for a folder the app has no reason to read. A
+/// release build with no configured vault therefore touches nothing and waits for the setup
+/// screen to say where the vault is.
 pub fn resolve_vault_root(chosen: Option<PathBuf>, fallback: Option<PathBuf>) -> PathBuf {
     if let Some(env) = std::env::var_os("GRIND_VAULT") {
         return PathBuf::from(env);
@@ -14,11 +21,62 @@ pub fn resolve_vault_root(chosen: Option<PathBuf>, fallback: Option<PathBuf>) ->
     let dev = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("vault");
-    if dev.is_dir() {
+    if cfg!(debug_assertions) && dev.is_dir() {
         return dev.canonicalize().unwrap_or(dev);
     }
     fallback.unwrap_or(dev)
 }
+
+/// Directories a vault needs before anything can be written into it.
+const VAULT_DIRS: [&str; 5] = [
+    "syllabus",
+    "knowledge",
+    "quizzes",
+    "progress/attempts",
+    "progress/sessions",
+];
+
+/// Create the directory skeleton, and a sample syllabus when there is not a single one — an
+/// empty vault gives the student nothing to press, and the file format is the one thing the
+/// app cannot infer for them.
+pub fn create_vault(root: &Path) -> std::io::Result<()> {
+    for dir in VAULT_DIRS {
+        std::fs::create_dir_all(root.join(dir))?;
+    }
+    let sample = root.join("syllabus").join("sample.md");
+    let empty = std::fs::read_dir(root.join("syllabus"))
+        .map(|entries| {
+            !entries.flatten().any(|entry| {
+                entry.path().extension().and_then(|e| e.to_str()) == Some("md")
+            })
+        })
+        .unwrap_or(true);
+    if empty {
+        std::fs::write(&sample, SAMPLE_SYLLABUS)?;
+    }
+    Ok(())
+}
+
+/// The syllabus grammar by example: `# Title`, `## Section`, numbered topic lines.
+const SAMPLE_SYLLABUS: &str = "\
+# Приклад предмета
+
+## 1. Назва розділу
+
+1. Перша тема розділу.
+2. Друга тема розділу: підпитання після двокрапки теж належать темі.
+3. Третя тема розділу.
+
+## 2. Другий розділ
+
+1. Нумерація починається заново в кожному розділі.
+2. Вкладена нумерація теж працює:
+   1.1. Підтема — окрема тема зі своїм конспектом.
+   1.2. Ще одна підтема.
+
+Замініть цей файл на власний силабус: одна тека `syllabus/`, один файл на предмет,
+ім'я файлу стає ідентифікатором предмета.
+";
 
 /// Accept either the vault itself or a folder containing one, so picking the project
 /// directory by mistake still works.

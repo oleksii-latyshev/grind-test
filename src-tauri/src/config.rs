@@ -13,6 +13,10 @@ pub struct AppConfig {
     /// Explicit vault location chosen by the user. `None` means "work it out".
     #[serde(default)]
     pub vault_root: Option<PathBuf>,
+    /// The setup screen has been completed. Separate from `vault_root` so an empty vault
+    /// shows an empty subject list rather than dragging the student back through setup.
+    #[serde(default)]
+    pub onboarded: bool,
 }
 
 fn config_file(config_dir: &Path) -> PathBuf {

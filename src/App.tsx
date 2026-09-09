@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
-import { GraduationCap, Moon, Sun } from "lucide-react";
+import { GraduationCap, Loader2, Moon, Sun } from "lucide-react";
+import { toast } from "sonner";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { QuizScreen } from "@/components/QuizScreen";
 import { ReaderScreen } from "@/components/ReaderScreen";
 import { ResultsScreen } from "@/components/ResultsScreen";
+import { SetupScreen } from "@/components/SetupScreen";
 import { StudySession } from "@/components/StudySession";
 import { SubjectScreen } from "@/components/SubjectScreen";
 import { SubjectsScreen } from "@/components/SubjectsScreen";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
-import type { AttemptResult, Quiz, SessionPlan, Topic } from "@/lib/types";
+import { api, errorMessage } from "@/lib/api";
+import type { AttemptResult, Quiz, SessionPlan, Topic, VaultInfo } from "@/lib/types";
 import "./App.css";
 
 type View =
@@ -23,6 +26,9 @@ type View =
 
 function App() {
   const [view, setView] = useState<View>({ name: "subjects" });
+  // Owned here rather than in the subjects screen: whether setup has happened decides which
+  // screen exists at all, and nothing may read the vault until it has.
+  const [vault, setVault] = useState<VaultInfo | null>(null);
   const [dark, setDark] = useState(
     () =>
       localStorage.getItem("theme") === "dark" ||
@@ -34,6 +40,13 @@ function App() {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
+
+  useEffect(() => {
+    api
+      .vaultInfo()
+      .then(setVault)
+      .catch((error) => toast.error(errorMessage(error)));
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -54,8 +67,19 @@ function App() {
 
       <main>
         <ErrorBoundary onReset={() => setView({ name: "subjects" })}>
-        {view.name === "subjects" ? (
-          <SubjectsScreen onOpen={(subjectId) => setView({ name: "subject", subjectId })} />
+        {vault === null ? (
+          <div className="flex items-center justify-center gap-2 p-16 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            Завантаження…
+          </div>
+        ) : !vault.configured ? (
+          <SetupScreen vault={vault} onReady={setVault} />
+        ) : view.name === "subjects" ? (
+          <SubjectsScreen
+            vault={vault}
+            onVaultChange={setVault}
+            onOpen={(subjectId) => setView({ name: "subject", subjectId })}
+          />
         ) : view.name === "subject" ? (
           <SubjectScreen
             subjectId={view.subjectId}

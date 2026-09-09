@@ -161,7 +161,16 @@ agy -p "<prompt>" --model <id> --output-format json --json-schema <path> --print
 commit it, never assume a file in it exists, always degrade gracefully when it is empty.
 
 Vault root resolution: `$GRIND_VAULT` → the folder the user picked (stored in the OS config
-dir, which is never permission-gated) → `<repo>/vault` (dev) → app data dir (packaged).
+dir, which is never permission-gated) → `<repo>/vault` (**debug builds only**) → app data dir
+(packaged).
+
+The repo probe is `cfg!(debug_assertions)`-gated because `CARGO_MANIFEST_DIR` is baked in at
+compile time: in a packaged build it names a folder on the developer's machine, and merely
+calling `is_dir()` on it is enough to raise a macOS folder-access prompt on first launch. For
+the same reason `vault_info` does not touch the filesystem until `config.onboarded` is set —
+before setup the app reads nothing, and the first system panel anyone sees is the folder
+picker they asked for. That picker is also the macOS grant, so `choose_vault` / `create_vault`
+are the only ways in.
 
 `AppState` holds the vault behind a `Mutex` because `choose_vault` swaps it at runtime; read
 it through `state.vault()`, never a stored copy. When file access fails, report *why* —

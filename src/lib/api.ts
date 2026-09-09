@@ -29,6 +29,12 @@ export const api = {
   /** Opens the system folder picker; resolves with the vault state afterwards. */
   chooseVault: () => invoke<VaultInfo>("choose_vault"),
 
+  /** Picks a parent folder and creates a vault skeleton inside it. */
+  createVault: () => invoke<VaultInfo>("create_vault"),
+
+  /** Accepts the folder the app already resolved, without opening a picker. */
+  useDefaultVault: () => invoke<VaultInfo>("use_default_vault"),
+
   listSubjects: () => invoke<SubjectOverview[]>("list_subjects"),
 
   getSubject: (subjectId: string) => invoke<SubjectDetail>("get_subject", { subjectId }),

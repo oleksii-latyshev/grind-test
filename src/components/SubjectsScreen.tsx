@@ -13,18 +13,18 @@ import { api, errorMessage } from "@/lib/api";
 import type { SubjectOverview, VaultInfo } from "@/lib/types";
 
 interface Props {
+  /** Owned by `App`, which decides between this screen and setup. */
+  vault: VaultInfo;
+  onVaultChange: (vault: VaultInfo) => void;
   onOpen: (subjectId: string) => void;
 }
 
-export function SubjectsScreen({ onOpen }: Props) {
+export function SubjectsScreen({ vault, onVaultChange, onOpen }: Props) {
   const [subjects, setSubjects] = useState<SubjectOverview[] | null>(null);
-  const [vault, setVault] = useState<VaultInfo | null>(null);
   const [choosing, setChoosing] = useState(false);
 
   const load = useCallback(async () => {
-    const info = await api.vaultInfo();
-    setVault(info);
-    if (!info.readable) {
+    if (!vault.readable) {
       // No point asking for subjects we cannot read; the vault card explains why.
       setSubjects([]);
       return;
@@ -35,7 +35,7 @@ export function SubjectsScreen({ onOpen }: Props) {
       toast.error(errorMessage(error));
       setSubjects([]);
     }
-  }, []);
+  }, [vault.readable, vault.root]);
 
   useEffect(() => {
     load().catch((error) => toast.error(errorMessage(error)));
@@ -45,9 +45,8 @@ export function SubjectsScreen({ onOpen }: Props) {
     setChoosing(true);
     try {
       const info = await api.chooseVault();
-      setVault(info);
+      onVaultChange(info);
       if (info.readable) {
-        setSubjects(await api.listSubjects());
         toast.success(`Сховище підключено: ${info.subject_count} предметів`);
       } else if (info.error) {
         toast.error(info.error);
@@ -68,11 +67,11 @@ export function SubjectsScreen({ onOpen }: Props) {
         </p>
       </header>
 
-      {vault && !vault.readable ? (
+      {!vault.readable ? (
         <VaultCard vault={vault} busy={choosing} onChoose={chooseVault} />
       ) : null}
 
-      {vault?.readable && !vault.agy_binary ? (
+      {vault.readable && !vault.agy_binary ? (
         <Alert variant="destructive">
           <TriangleAlert />
           <AlertTitle>CLI `agy` не знайдено</AlertTitle>
@@ -88,7 +87,7 @@ export function SubjectsScreen({ onOpen }: Props) {
           <Skeleton className="h-44 w-full rounded-4xl" />
           <Skeleton className="h-44 w-full rounded-4xl" />
         </div>
-      ) : subjects.length === 0 && vault?.readable ? (
+      ) : subjects.length === 0 && vault.readable ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-12 text-center text-sm text-muted-foreground">
             <FolderOpen className="size-6" />
@@ -104,7 +103,7 @@ export function SubjectsScreen({ onOpen }: Props) {
         </div>
       )}
 
-      {vault?.readable ? (
+      {vault.readable ? (
         <footer className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
           <p className="font-mono text-xs text-muted-foreground">Сховище: {vault.root}</p>
           <Button variant="ghost" size="sm" onClick={chooseVault} disabled={choosing}>

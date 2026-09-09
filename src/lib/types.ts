@@ -147,6 +147,8 @@ export interface KnowledgeBatchReport {
 
 export interface VaultInfo {
   root: string;
+  /** Setup is done and the student has said where the vault is. */
+  configured: boolean;
   /** The app can list the syllabus directory right now. */
   readable: boolean;
   subject_count: number;
