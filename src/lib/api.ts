@@ -7,6 +7,9 @@ import type {
   GenerationEvent,
   Hint,
   KnowledgeBatchReport,
+  ModelChoice,
+  ModelInfo,
+  ModelSettings,
   KnowledgeNote,
   Quiz,
   QuizRequest,
@@ -34,6 +37,13 @@ export const api = {
 
   /** Accepts the folder the app already resolved, without opening a picker. */
   useDefaultVault: () => invoke<VaultInfo>("use_default_vault"),
+
+  getModels: () => invoke<ModelChoice>("get_models"),
+
+  setModels: (models: ModelSettings) => invoke<ModelChoice>("set_models", { models }),
+
+  /** Asks the CLI what it can run; fails when `agy` is missing. */
+  listModels: () => invoke<ModelInfo[]>("list_models"),
 
   listSubjects: () => invoke<SubjectOverview[]>("list_subjects"),
 

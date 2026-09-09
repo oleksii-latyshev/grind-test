@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { GraduationCap, Loader2, Moon, Sun } from "lucide-react";
+import { GraduationCap, Loader2, Moon, Settings, Sun } from "lucide-react";
 import { toast } from "sonner";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -7,6 +7,7 @@ import { Pomodoro } from "@/components/Pomodoro";
 import { QuizScreen } from "@/components/QuizScreen";
 import { ReaderScreen } from "@/components/ReaderScreen";
 import { ResultsScreen } from "@/components/ResultsScreen";
+import { SettingsScreen } from "@/components/SettingsScreen";
 import { SetupScreen } from "@/components/SetupScreen";
 import { StudySession } from "@/components/StudySession";
 import { SubjectScreen } from "@/components/SubjectScreen";
@@ -19,6 +20,7 @@ import "./App.css";
 
 type View =
   | { name: "subjects" }
+  | { name: "settings" }
   | { name: "subject"; subjectId: string }
   | { name: "reader"; topic: Topic }
   | { name: "session"; plan: SessionPlan }
@@ -64,6 +66,16 @@ function App() {
           {/* In the header rather than inside a session: the clock has to keep running while
               you browse topics or read a note outside one. */}
           {vault?.configured ? <Pomodoro /> : null}
+          {vault?.configured ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setView({ name: "settings" })}
+              title="Моделі"
+            >
+              <Settings className="size-4" />
+            </Button>
+          ) : null}
           <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)}>
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
             <span className="sr-only">Змінити тему</span>
@@ -80,6 +92,8 @@ function App() {
           </div>
         ) : !vault.configured ? (
           <SetupScreen vault={vault} onReady={setVault} />
+        ) : view.name === "settings" ? (
+          <SettingsScreen onBack={() => setView({ name: "subjects" })} />
         ) : view.name === "subjects" ? (
           <SubjectsScreen
             vault={vault}

@@ -14,6 +14,20 @@ use grind_test_lib::vault::progress;
 use grind_test_lib::vault::quiz::Difficulty;
 use grind_test_lib::vault::{knowledge, syllabus, Vault};
 
+/// Read the tier→model mapping the app persisted. The CLI has no Tauri path resolver, so it
+/// looks in the same place `dirs` would; failing to find it just means the defaults.
+fn load_model_settings() -> grind_test_lib::agy::ModelSettings {
+    let Some(home) = std::env::var_os("HOME").map(PathBuf::from) else {
+        return Default::default();
+    };
+    let config_dir = if cfg!(target_os = "macos") {
+        home.join("Library/Application Support/com.user.grind-test")
+    } else {
+        home.join(".config/com.user.grind-test")
+    };
+    grind_test_lib::config::load(&config_dir).models
+}
+
 #[derive(Parser)]
 #[command(name = "grind", about = "Vault tooling for grind-test")]
 struct Cli {
@@ -126,6 +140,9 @@ impl From<DifficultyArg> for Difficulty {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
+    // The CLI shares the app's model settings; without this it would silently run the
+    // shipped defaults while the GUI used the student's picks.
+    grind_test_lib::agy::configure(load_model_settings());
     let vault = Vault::new(resolve_vault_root(None, None));
 
     match cli.command {

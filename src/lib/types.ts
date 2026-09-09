@@ -157,6 +157,24 @@ export interface VaultInfo {
   agy_binary: string | null;
 }
 
+/** Which model id each tier resolves to; mirrors `agy::ModelSettings`. */
+export interface ModelSettings {
+  smart: string;
+  fast: string;
+}
+
+/** One entry from `agy models`. */
+export interface ModelInfo {
+  id: string;
+  label: string;
+}
+
+export interface ModelChoice {
+  models: ModelSettings;
+  /** What the app ships with, for "back to defaults". */
+  defaults: ModelSettings;
+}
+
 export interface QuizRequest {
   subject: string;
   topic_ids?: string[] | null;

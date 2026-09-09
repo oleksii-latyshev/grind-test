@@ -94,9 +94,10 @@ results screen can offer **Продовжити навчання** and mean lite
 them back with `readSessionSettings`, never by reassembling the pieces. Hand-picked topics
 are deliberately not persisted: they belong to one subject and one sitting.
 
-**Model economy is a hard requirement.** Smart model = knowledge generation + hints (rare,
-cached on disk). Fast model = quiz generation (frequent). Never generate knowledge with the
-fast model, never generate quizzes with the smart model.
+**Model economy is a hard requirement.** Smart tier = knowledge generation + hints (rare,
+cached on disk). Fast tier = quiz and session generation (frequent). Never generate knowledge
+at the fast tier, never generate quizzes at the smart one. Which model each tier names is the
+student's choice; which tier a job uses is not.
 
 ## Stack
 
@@ -153,9 +154,13 @@ agy -p "<prompt>" --model <id> --output-format json --json-schema <path> --print
 - stdout is a single JSON envelope: `{status, response, structured_output, usage, ...}`.
   **Read `structured_output`, not `response`** — `response` is prose and unreliable.
   Treat `status != "SUCCESS"` as a failure and retry once.
-- `agy models` lists ids. Current picks: smart `gemini-3.1-pro-high`, fast
-  `gemini-3.8-flash-medium`, hints `gemini-3.1-pro-high`. Keep these in one place
-  (`src-tauri/src/agy.rs`), never hardcode a model id at a call site.
+- `agy models` lists ids (`id<TAB>label`, one per line) — including Claude, Gemini and
+  whatever else Antigravity exposes. Which model each tier resolves to is a setting, stored
+  in `AppConfig::models` and pushed into `agy::configure` at startup and on save; the shipped
+  defaults are `agy::DEFAULT_SMART` / `DEFAULT_FAST`. Never hardcode a model id at a call
+  site — ask for a `ModelTier`.
+- The tier a job runs at is **not** configurable, only the model behind it. Knowledge and
+  hints are always `Smart`, quizzes and sessions always `Fast`.
 - Every call has a **~13k token system-prompt floor**, so batch related work into one call
   where quality allows (e.g. all questions for a quiz = one call) but keep one call per
   knowledge topic (quality matters more there).

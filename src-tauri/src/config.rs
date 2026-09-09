@@ -8,6 +8,8 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+use crate::agy::ModelSettings;
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AppConfig {
     /// Explicit vault location chosen by the user. `None` means "work it out".
@@ -17,6 +19,10 @@ pub struct AppConfig {
     /// shows an empty subject list rather than dragging the student back through setup.
     #[serde(default)]
     pub onboarded: bool,
+    /// Which model id each tier resolves to. Defaulted, so an older config file simply
+    /// keeps the shipped picks.
+    #[serde(default)]
+    pub models: ModelSettings,
 }
 
 fn config_file(config_dir: &Path) -> PathBuf {

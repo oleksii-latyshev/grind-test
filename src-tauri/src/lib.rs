@@ -17,7 +17,10 @@ pub fn run() {
                 .path()
                 .app_config_dir()
                 .unwrap_or_else(|_| std::path::PathBuf::from("."));
-            let chosen = config::load(&config_dir).vault_root;
+            let config = config::load(&config_dir);
+            // Before anything can call a model: every tier lookup reads this.
+            agy::configure(config.models.clone());
+            let chosen = config.vault_root;
             // Packaged builds have no repo next to them, so fall back to the app data dir.
             let fallback = app.path().app_data_dir().ok().map(|dir| dir.join("vault"));
             let root = resolve_vault_root(chosen, fallback);
@@ -26,6 +29,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::vault_info,
+            commands::get_models,
+            commands::set_models,
+            commands::list_models,
             commands::choose_vault,
             commands::create_vault,
             commands::use_default_vault,

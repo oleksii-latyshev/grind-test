@@ -35,7 +35,11 @@ draws them** — one from each part of the syllabus, at random, leaning toward t
 A pomodoro timer sits in the header, configurable and running across screens. It announces
 the end of a round and stops there — it never covers what you are reading.
 
-All generation goes through the [Antigravity](https://antigravity.google) CLI (`agy`).
+All generation goes through the [Antigravity](https://antigravity.google) CLI (`agy`). Jobs
+are split across two tiers — a smart one for study notes, grading and hints, a fast one for
+quizzes and session questions — and **Моделі** in the header picks which model each tier
+resolves to, from whatever `agy models` lists (Gemini, Claude and the rest). Which tier a job
+runs at is fixed: a study note is worth paying for, a quiz is not.
 
 ## Language
 
