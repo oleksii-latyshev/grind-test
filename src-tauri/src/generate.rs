@@ -886,6 +886,8 @@ pub fn plan_session(
     Ok(plan)
 }
 
+static PREPARE_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 /// Generate the open questions and the mini-quiz for a planned session — the one fast call
 /// a session costs up front.
 ///
@@ -896,6 +898,17 @@ pub async fn prepare_questions(
     subject_id: &str,
     session_id: &str,
 ) -> Result<SessionPlan> {
+    let plan = load_session(vault, subject_id, session_id)?;
+    if !plan.quiz.is_empty() {
+        return Ok(plan);
+    }
+
+    // Returning early is not enough on its own: two callers can both find an unprepared
+    // session and both pay for a generation. React's StrictMode fires effects twice in
+    // development, which is exactly that race. A student prepares one session at a time, so
+    // one global lock is enough — and the state is re-read after acquiring it, because the
+    // holder may have just finished the very session being waited on.
+    let _guard = PREPARE_LOCK.lock().await;
     let mut plan = load_session(vault, subject_id, session_id)?;
     if !plan.quiz.is_empty() {
         return Ok(plan);
