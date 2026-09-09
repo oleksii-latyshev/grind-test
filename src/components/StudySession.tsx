@@ -23,6 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { api, errorMessage } from "@/lib/api";
 import { clearDraft, readDraft, writeDraft } from "@/lib/drafts";
+import { readSessionSettings } from "@/lib/prefs";
 import { STAGES, formatDue, scoreTone } from "@/lib/study";
 import { sessionReady } from "@/lib/types";
 import type { SessionPlan, SessionResult } from "@/lib/types";
@@ -40,9 +41,11 @@ interface Props {
   plan: SessionPlan;
   onExit: () => void;
   onFinished: () => void;
+  /** Start straight into the next session, without going back through the menu. */
+  onContinue: (plan: SessionPlan) => void;
 }
 
-export function StudySession({ plan: initial, onExit, onFinished }: Props) {
+export function StudySession({ plan: initial, onExit, onFinished, onContinue }: Props) {
   const [step, setStep] = useState<Step>("read");
   const [readIndex, setReadIndex] = useState(0);
   // The plan arrives with notes but usually without questions; the generation call runs
@@ -66,10 +69,6 @@ export function StudySession({ plan: initial, onExit, onFinished }: Props) {
   useEffect(() => {
     writeDraft(plan.id, openAnswers);
   }, [plan.id, openAnswers]);
-
-  useEffect(() => {
-    setPlan(initial);
-  }, [initial]);
 
   // One attempt per session, started as the first note opens. The command is idempotent, so
   // a resumed session that already has its questions simply gets them back.
@@ -149,7 +148,15 @@ export function StudySession({ plan: initial, onExit, onFinished }: Props) {
   }
 
   if (step === "done" && result) {
-    return <SessionSummary plan={plan} result={result} openAnswers={openAnswers} onDone={onFinished} />;
+    return (
+      <SessionSummary
+        plan={plan}
+        result={result}
+        openAnswers={openAnswers}
+        onDone={onFinished}
+        onContinue={onContinue}
+      />
+    );
   }
 
   const answeredQuiz = Object.values(quizSelections).filter((s) => s.length > 0).length;
@@ -397,13 +404,40 @@ function SessionSummary({
   result,
   openAnswers,
   onDone,
+  onContinue,
 }: {
   plan: SessionPlan;
   result: SessionResult;
   openAnswers: Record<string, string>;
   onDone: () => void;
+  onContinue: (plan: SessionPlan) => void;
 }) {
   const answersByQuestion = new Map(result.answers.map((answer) => [answer.question_id, answer]));
+  const [starting, setStarting] = useState(false);
+
+  // Read at click time, not at render: the same settings the study tab is showing.
+  // A hand-picked list cannot be repeated — there is nothing to pick from here — so that
+  // one case offers no shortcut rather than quietly changing how topics are chosen.
+  const settings = readSessionSettings();
+
+  async function next() {
+    setStarting(true);
+    try {
+      onContinue(
+        await api.planStudySession({
+          subjectId: plan.subject,
+          size: settings.size,
+          mode: settings.pace,
+          selection: settings.pick === "spread" ? "spread" : "scheduled",
+        }),
+      );
+      window.scrollTo({ top: 0 });
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setStarting(false);
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 p-8">
@@ -414,7 +448,18 @@ function SessionSummary({
             {result.overall_score}%
           </p>
           <Progress value={result.overall_score} />
-          <Button onClick={onDone}>Далі</Button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button variant="outline" onClick={onDone}>
+              До предмета
+            </Button>
+            {settings.pick === "manual" ? null : (
+              <Button onClick={next} disabled={starting}>
+                {starting ? <Loader2 className="size-4 animate-spin" /> : null}
+                Продовжити навчання
+                <ArrowRight className="size-4" />
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 

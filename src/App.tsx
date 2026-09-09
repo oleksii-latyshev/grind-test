@@ -95,9 +95,13 @@ function App() {
           />
         ) : view.name === "session" ? (
           <StudySession
+            // A new session must start from scratch — step, reading position, drafts and
+            // the result of the one just finished all belong to the old id.
+            key={view.plan.id}
             plan={view.plan}
             onExit={() => setView({ name: "subject", subjectId: view.plan.subject })}
             onFinished={() => setView({ name: "subject", subjectId: view.plan.subject })}
+            onContinue={(plan) => setView({ name: "session", plan })}
           />
         ) : view.name === "quiz" ? (
           <QuizScreen

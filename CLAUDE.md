@@ -89,6 +89,11 @@ neither the generation call nor the typing.
 knows better than the ladder which topics the exam is about to ask for. Either way a session
 is capped at `MAX_SESSION_TOPICS`.
 
+Pace, selection and size persist to `localStorage` under one key (`src/lib/prefs.ts`), so the
+results screen can offer **Продовжити навчання** and mean literally the same settings. Read
+them back with `readSessionSettings`, never by reassembling the pieces. Hand-picked topics
+are deliberately not persisted: they belong to one subject and one sitting.
+
 **Model economy is a hard requirement.** Smart model = knowledge generation + hints (rare,
 cached on disk). Fast model = quiz generation (frequent). Never generate knowledge with the
 fast model, never generate quizzes with the smart model.

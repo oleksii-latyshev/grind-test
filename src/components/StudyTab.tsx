@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api, errorMessage } from "@/lib/api";
+import { useSessionSettings } from "@/lib/prefs";
+import type { TopicPick } from "@/lib/prefs";
 import {
   MAX_TOPICS,
   MINUTES_PER_TOPIC,
@@ -33,8 +35,6 @@ import type {
   Topic,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-type Pick = "auto" | "spread" | "manual";
 
 const PACE: Record<SessionMode, { label: string; blurb: string }> = {
   full: {
@@ -54,7 +54,7 @@ const PACE: Record<SessionMode, { label: string; blurb: string }> = {
   },
 };
 
-const PICK: Record<Pick, { label: string; blurb: string }> = {
+const PICK: Record<TopicPick, { label: string; blurb: string }> = {
   auto: {
     label: "Автоматично",
     blurb: "Спершу прострочені повторення, далі нові теми за порядком силабуса.",
@@ -76,9 +76,10 @@ interface Props {
 }
 
 export function StudyTab({ detail, onSessionStart }: Props) {
-  const [pace, setPace] = useState<SessionMode>("sprint");
-  const [pick, setPick] = useState<Pick>("auto");
-  const [size, setSize] = useState(SESSION_SIZES.sprint[1]);
+  // Remembered per machine: these three are the same on almost every visit, and re-picking
+  // them each time is the friction between deciding to study and studying.
+  const [settings, setSettings] = useSessionSettings();
+  const { pace, pick, size } = settings;
   const [chosen, setChosen] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [starting, setStarting] = useState(false);
@@ -106,8 +107,9 @@ export function StudyTab({ detail, onSessionStart }: Props) {
   const estimate = (mode: SessionMode) => formatHours(remaining * MINUTES_PER_TOPIC[mode]);
 
   function changePace(next: SessionMode) {
-    setPace(next);
-    setSize(SESSION_SIZES[next][1]);
+    // The size steps differ per pace, so the size moves with it rather than being carried
+    // over into a range where it no longer appears as an option.
+    setSettings({ ...settings, pace: next, size: SESSION_SIZES[next][1] });
     setChosen((current) => current.slice(0, MAX_TOPICS[next]));
   }
 
@@ -261,7 +263,7 @@ export function StudyTab({ detail, onSessionStart }: Props) {
             </p>
             <div className="flex flex-wrap gap-2">
               {(["auto", "spread", "manual"] as const).map((value) => (
-                <Segment key={value} active={pick === value} onClick={() => setPick(value)}>
+                <Segment key={value} active={pick === value} onClick={() => setSettings({ ...settings, pick: value })}>
                   {PICK[value].label}
                 </Segment>
               ))}
@@ -275,7 +277,7 @@ export function StudyTab({ detail, onSessionStart }: Props) {
               </p>
               <div className="flex flex-wrap gap-2">
                 {SESSION_SIZES[pace].map((value) => (
-                  <Segment key={value} active={size === value} onClick={() => setSize(value)}>
+                  <Segment key={value} active={size === value} onClick={() => setSettings({ ...settings, size: value })}>
                     {value}
                   </Segment>
                 ))}
