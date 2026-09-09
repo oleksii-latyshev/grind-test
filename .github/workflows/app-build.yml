@@ -54,7 +54,7 @@ jobs:
 
       # `upload-artifact` does not preserve the executable bit, which would leave the
       # unpacked .app unable to launch. `ditto` produces the same archive format the App
-      # Store tooling uses and keeps the bundle intact. The .dmg needs no such care.
+      # Store tooling uses and keeps the bundle intact.
       - name: Pack the macOS app
         if: runner.os == 'macOS'
         run: |
@@ -62,14 +62,29 @@ jobs:
             "src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos/grind-test.app" \
             "${{ matrix.artifact }}.zip"
 
+      # Built here rather than by Tauri's dmg bundler, which drives Finder over AppleScript
+      # purely to lay the window out prettily, and dies with "Not authorised to send Apple
+      # events to Finder (-1743)" on any machine without Automation permission — CI
+      # included. `hdiutil` needs no such permission, and drag-to-Applications is the whole
+      # of what the image has to do.
+      - name: Bundle the macOS disk image
+        if: runner.os == 'macOS'
+        run: |
+          stage="$(mktemp -d)"
+          cp -R "src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos/grind-test.app" "$stage/"
+          ln -s /Applications "$stage/Applications"
+          hdiutil create -volname grind-test -srcfolder "$stage" -ov -format UDZO \
+            "${{ matrix.artifact }}.dmg"
+          hdiutil verify "${{ matrix.artifact }}.dmg"
+
       - name: Upload macOS build
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: |
+            ${{ matrix.artifact }}.dmg
             ${{ matrix.artifact }}.zip
-            src-tauri/target/${{ matrix.rust-target }}/release/bundle/dmg/*.dmg
           retention-days: ${{ inputs.retention-days }}
           if-no-files-found: error
 

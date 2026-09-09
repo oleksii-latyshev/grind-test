@@ -115,12 +115,17 @@ All vault reading/writing, syllabus parsing and `agy` invocation lives in Rust
 (`src-tauri/src/`) and is exposed to React as Tauri commands. **Do not reimplement vault
 logic in TypeScript** — the frontend only consumes typed JSON from `invoke()`.
 
-The same Rust code is reachable from the terminal via a second binary for bulk jobs that are
-too long to babysit in the GUI:
+The same Rust code is reachable from the terminal via the `grind` CLI, a workspace member
+beside the app, for bulk jobs too long to babysit in the GUI:
 
 ```bash
-cd src-tauri && cargo run --bin grind -- <subcommand>
+cd src-tauri && cargo run -p grind -- <subcommand>
 ```
+
+It is a **separate crate on purpose**. As a second `[[bin]]` of the app package it broke
+`tauri build --target universal-apple-darwin`: the universal build `lipo`s only the main
+binary into `target/universal-apple-darwin/release/`, while the bundler copies every binary
+the manifest declares, so it failed on a file that was never merged. One binary per package.
 
 Layout:
 
@@ -136,7 +141,7 @@ Layout:
 | `src-tauri/src/agy.rs` | spawn the `agy` CLI, parse its JSON envelope |
 | `src-tauri/src/generate.rs` | prompt assembly + the three generation jobs |
 | `src-tauri/src/commands.rs` | `#[tauri::command]` surface |
-| `src-tauri/src/bin/grind.rs` | terminal CLI over the same functions |
+| `src-tauri/grind-cli/src/main.rs` | terminal CLI over the same functions (own crate) |
 | `src-tauri/prompts/*.md` | prompt templates, `include_str!`-embedded |
 | `src-tauri/schemas/*.json` | JSON schemas passed to `agy --json-schema` |
 
@@ -254,11 +259,14 @@ Tauri events (`generation://progress`). A crash or quit must never lose complete
 
 ## Commands
 
-`bundle.targets` in `tauri.conf.json` must stay a cross-platform list (`app` + `dmg` +
-`nsis`). Tauri filters it to the host platform, so one value serves both macOS and Windows CI
-legs. The `dmg` bundler drives Finder over AppleScript, so it needs a GUI session: it works
-on a normal desktop and on GitHub's macOS runners, and fails over ssh or in a container —
-build `--bundles app` there.
+`bundle.targets` in `tauri.conf.json` must stay a cross-platform list (`app` + `nsis`). Tauri
+filters it to the host platform, so one value serves both macOS and Windows CI legs.
+
+**Do not add `dmg`.** Tauri's dmg bundler drives Finder over AppleScript purely to lay the
+window out, and dies with `Not authorised to send Apple events to Finder (-1743)` on any
+machine without Automation permission — CI included. The disk image is built in
+`app-build.yml` with `hdiutil` instead: an `.app` plus an `/Applications` symlink, which
+needs no permission and is the whole of what the image has to do.
 
 macOS CI builds one `universal-apple-darwin` binary rather than a runner per architecture;
 GitHub retired the `macos-13` Intel image.
@@ -268,7 +276,7 @@ bun run dev            # vite only
 bun run tauri dev      # full app
 bun run build          # tsc + vite build
 cd src-tauri && cargo check
-cd src-tauri && cargo run --bin grind -- knowledge --subject demo
-cd src-tauri && cargo run --bin grind -- session --subject demo --size 2
-cd src-tauri && cargo run --bin grind -- session-finish --subject demo --session <id> --answers a.json
+cd src-tauri && cargo run -p grind -- knowledge --subject demo
+cd src-tauri && cargo run -p grind -- session --subject demo --size 2
+cd src-tauri && cargo run -p grind -- session-finish --subject demo --session <id> --answers a.json
 ```

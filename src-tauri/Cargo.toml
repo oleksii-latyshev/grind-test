@@ -4,9 +4,12 @@ version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
-# Two binaries live here (the app and the `grind` vault CLI); `cargo run` needs to know
-# which one `tauri dev` means.
-default-run = "grind-test"
+
+# The `grind` vault CLI is a workspace member rather than a second `[[bin]]` here: a macOS
+# universal build lipos only the main binary, while the bundler copies every binary the
+# manifest declares, so a second one breaks `--target universal-apple-darwin`.
+[workspace]
+members = ["grind-cli"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -40,10 +43,6 @@ tauri-plugin-dialog = "2"
 [[bin]]
 name = "grind-test"
 path = "src/main.rs"
-
-[[bin]]
-name = "grind"
-path = "src/bin/grind.rs"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

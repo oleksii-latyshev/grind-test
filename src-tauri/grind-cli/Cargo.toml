@@ -1,0 +1,24 @@
+# The vault CLI lives in its own crate rather than as a second `[[bin]]` of the app.
+#
+# A macOS universal build lipos only the *main* binary into
+# `target/universal-apple-darwin/release/`, but the bundler copies every `[[bin]]` the
+# manifest declares — so a second binary there makes `tauri build --target
+# universal-apple-darwin` fail on a file that was never merged. One binary per package
+# keeps the two concerns from colliding.
+[package]
+name = "grind"
+version = "0.1.0"
+edition = "2021"
+description = "Terminal vault tooling for grind-test"
+
+[[bin]]
+name = "grind"
+path = "src/main.rs"
+
+[dependencies]
+grind-test-lib = { path = "..", package = "grind-test" }
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

@@ -6,38 +6,54 @@
 
 <p align="center">
   A desktop app for exam prep. Give it your list of exam topics; it writes you a study note
-  for each one, walks you through them, and remembers what you keep getting wrong.
+  for each one, walks you through them, and remembers what you keep forgetting.
 </p>
-
----
 
 ## How it works
 
+```mermaid
+sequenceDiagram
+    actor You
+    participant App
+    participant Vault as Vault (a folder you pick)
+    participant Smart as Smart model
+    participant Fast as Fast model
+
+    You->>Vault: syllabus.md — your list of exam topics
+    App->>Smart: write a study note for each topic
+    Smart-->>Vault: one note per topic, generated once and reused
+
+    Note over You,Fast: one study session, 2–6 topics
+
+    Vault-->>You: the notes, shown immediately
+    App->>Fast: open questions + mini-quiz, in the background
+    You->>App: written answers, then the quiz
+    App->>Smart: grade every answer in a single call
+    Smart-->>You: score, what you covered, what you missed
+    App->>Vault: next review in 1 → 2 → 4 → 7 → 14 → 30 days
 ```
-vault/syllabus/<subject>.md      ← your topic list (one file per subject)
-        │  smart model
-        ▼
-vault/knowledge/<subject>/*.md   ← one study note per topic, generated once
-        │  fast model + your answer history
-        ▼
-a study session                  ← read, answer in writing, mini-quiz
-        │  graded by the smart model
-        ▼
-vault/progress/                  ← a review schedule that decides what you see next
-```
 
-A **session** is the core of it: two to six topics, read the note, write an answer to one
-broad exam-style question per topic, then a mini-quiz. The written half is graded against a
-rubric — what you covered, what you missed — and counts for 60% of the topic's score. That
-score moves the topic along a Leitner ladder: 1 → 2 → 4 → 7 → 14 → 30 days.
+## Features
 
-Three paces trade depth for coverage. **Full** takes the whole note and an essay-length
-answer. **Balanced** keeps the note and takes the answer as bullet points. **Sprint** also
-condenses the note to the topic answered in one paragraph, its key terms and its usual traps.
-The answer is always cut before the reading — you cannot recall a note you were never shown.
-
-Topics come from the review schedule, from you, or drawn **the way an exam paper draws
-them**: one from each part of the syllabus, leaning toward your weakest.
+- **Study notes** written once per topic and cached on disk — the gist, the topic answered
+  in one paragraph, the mechanism, key terms and the traps examiners use.
+- **Sessions**: read, answer one broad exam-style question per topic in writing, then a
+  mini-quiz. The written half is graded against a rubric and counts for 60%.
+- **Spaced repetition** — a Leitner ladder decides what you see next and when.
+- **Three paces**: full note + essay answer, full note + bullet points, or a condensed note
+  for a sprint. The answer is cut before the reading.
+- **Exam-style topic draw** — one from each part of the syllabus, leaning toward your
+  weakest, the way a ticket is drawn. Or follow the schedule, or pick by hand.
+- **No waiting to start** — notes open instantly while the questions generate behind them.
+- **Nothing is lost** — sessions are written to disk at once, answers drafted as you type,
+  and an interrupted one is resumable.
+- **Hints** during a quiz, grounded in that topic's note, never containing the answer.
+- **Pomodoro timer** in the header, configurable, running across screens.
+- **Pick your models** per tier — Gemini, Claude, anything `agy` lists.
+- **Interface in Ukrainian, Russian or English.** Notes and questions stay Ukrainian: that
+  is the language of the exam.
+- **Plain files** — markdown and JSON in a folder you choose. No database, no account.
+- macOS and Windows, light and dark, with a tray icon.
 
 ## Running it
 
@@ -46,67 +62,46 @@ bun install
 bun run tauri dev
 ```
 
-Requires the [Antigravity](https://antigravity.google) CLI (`agy`) on your `PATH`, or its
-path in `GRIND_AGY_BIN`. All generation goes through it, split across two tiers — a smart
-model for notes, grading and hints, a fast one for quizzes and session questions. **Моделі**
-in the header picks which model each tier uses, from whatever `agy models` lists (Gemini,
-Claude and the rest). Which tier a job runs at is fixed: a study note is worth paying for, a
-quiz is not.
+Needs the [Antigravity](https://antigravity.google) CLI (`agy`) on your `PATH`, or its path
+in `GRIND_AGY_BIN` — it is the app's only model access. Work is split across two tiers: a
+smart model for notes, grading and hints, a fast one for quizzes and session questions.
+**Моделі** in the header picks which model each tier uses. Which tier a job runs at is fixed:
+a study note is worth paying for, a quiz is not.
 
-To build an installable app:
+Filling the notes for 250+ topics is easier from a terminal, and it is resumable — topics
+that already have a note are skipped:
 
 ```bash
-bun run tauri build
+cd src-tauri && cargo run -p grind -- knowledge --subject demo --concurrency 4
 ```
 
-macOS gets a universal `.dmg` and the `.app`; Windows gets an NSIS installer. The dmg
-bundler drives Finder over AppleScript, so on a headless shell pass `--bundles app`.
+To build it: `bun run tauri build` — a `.app` on macOS, an NSIS installer on Windows.
+Releases also carry a universal `.dmg`, assembled in CI with `hdiutil` because Tauri's own
+dmg bundler needs Finder automation that no CI runner has.
 
 ## The vault
 
-Everything the app knows lives in one folder you choose: syllabi in, notes and results out,
-as ordinary markdown and JSON. On first launch it asks where — point at an existing folder,
-create a new one, or keep it inside the app's own data directory. Nothing on disk is read
-before you answer, so macOS never raises a folder prompt for somewhere you did not name.
+Everything the app knows lives in one folder you choose. On first launch it asks where:
+point at an existing folder, or let it create one. Nothing on disk is read before you
+answer, so macOS never raises a folder prompt for somewhere you did not name.
 
-A syllabus is a markdown file: a title, sections under `##`, a numbered list of topics under
-each. The filename becomes the subject id. Creating a vault leaves a sample in it.
+**The app creates the structure; you supply the topics.** Creating a vault gives you the
+directories and one sample syllabus showing the format — but what to study is yours to
+write. A syllabus is a markdown file: a title, sections under `##`, a numbered list of
+topics under each. The filename becomes the subject id.
 
-`vault/` at the repo root is gitignored — it holds personal exam material.
-
-## CLI for bulk jobs
-
-Filling the knowledge base for 250+ topics is easier from a terminal than from the GUI, and
-it is resumable — topics that already have a note are skipped, so an interrupted run just
-gets started again.
-
-```bash
-cd src-tauri
-cargo run --bin grind -- status
-cargo run --bin grind -- topics --subject cs1 --missing
-cargo run --bin grind -- knowledge --subject cs1 --concurrency 4
+```
+your-vault/
+├── syllabus/       ← you write these: one file per subject
+│   └── demo.md
+├── knowledge/      ← generated notes, one per topic
+├── quizzes/
+└── progress/       ← attempts, mastery, review schedule
 ```
 
-## Language
-
-The interface speaks Ukrainian, Russian or English — switch it in the header. The content
-does not follow: study notes, questions, explanations and hints are always Ukrainian, because
-that is the language of the exam.
-
-## CI and releases
-
-Every push runs a typecheck, the Rust tests, and a full package for macOS and Windows.
-Pushing a `v*` tag runs the same matrix and publishes the bundles to a GitHub Release.
-
-```bash
-# bump `version` in src-tauri/tauri.conf.json and package.json first
-git tag v0.2.0 && git push origin v0.2.0
-```
-
-Builds are unsigned, so macOS refuses a downloaded one on first open — right-click → **Open**,
-once.
+Everything but `syllabus/` fills itself in as you use the app.
 
 ---
 
-Architecture and conventions live in [CLAUDE.md](CLAUDE.md); what is planned and why is in
-[ROADMAP.md](ROADMAP.md).
+Architecture and conventions: [CLAUDE.md](CLAUDE.md) · what is planned and why:
+[ROADMAP.md](ROADMAP.md)
