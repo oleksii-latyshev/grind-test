@@ -141,7 +141,13 @@ Layout:
 | `src-tauri/schemas/*.json` | JSON schemas passed to `agy --json-schema` |
 
 Prompts and schemas are embedded at compile time — the shipped app must not depend on files
-next to the binary.
+next to the binary. The tray icon (`icons/tray.png`) is `include_bytes!`-embedded for the same
+reason.
+
+The app icon and the tray icon are the same graduation cap, drawn once by
+`icons/make_icon.py`: a filled version on `--primary` for the Dock, and a black-on-transparent
+template macOS recolours for the menu bar. Regenerate the platform set with
+`bun run tauri icon icons/app-icon.png`.
 
 ## The `agy` CLI (Antigravity)
 
