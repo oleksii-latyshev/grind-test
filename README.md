@@ -32,6 +32,9 @@ left.
 Topics can be served by the review schedule, chosen by hand, or drawn **the way an exam paper
 draws them** — one from each part of the syllabus, at random, leaning toward the weakest.
 
+A pomodoro timer sits in the header, configurable and running across screens. It announces
+the end of a round and stops there — it never covers what you are reading.
+
 All generation goes through the [Antigravity](https://antigravity.google) CLI (`agy`).
 
 ## Language

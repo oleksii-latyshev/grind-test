@@ -3,6 +3,7 @@ import { GraduationCap, Loader2, Moon, Sun } from "lucide-react";
 import { toast } from "sonner";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Pomodoro } from "@/components/Pomodoro";
 import { QuizScreen } from "@/components/QuizScreen";
 import { ReaderScreen } from "@/components/ReaderScreen";
 import { ResultsScreen } from "@/components/ResultsScreen";
@@ -59,10 +60,15 @@ function App() {
           <GraduationCap className="size-5 text-primary" />
           grind-test
         </button>
-        <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)}>
-          {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-          <span className="sr-only">Змінити тему</span>
-        </Button>
+        <div className="flex items-center gap-1">
+          {/* In the header rather than inside a session: the clock has to keep running while
+              you browse topics or read a note outside one. */}
+          {vault?.configured ? <Pomodoro /> : null}
+          <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)}>
+            {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            <span className="sr-only">Змінити тему</span>
+          </Button>
+        </div>
       </header>
 
       <main>
