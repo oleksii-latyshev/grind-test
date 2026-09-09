@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FolderOpen, FolderPlus, GraduationCap, HardDrive, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useT } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api, errorMessage } from "@/lib/api";
@@ -24,6 +25,7 @@ export function SetupScreen({
   vault: VaultInfo;
   onReady: (info: VaultInfo) => void;
 }) {
+  const t = useT();
   const [busy, setBusy] = useState<Action | null>(null);
 
   async function run(action: Action, call: () => Promise<VaultInfo>) {
@@ -43,20 +45,16 @@ export function SetupScreen({
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-8 pt-16">
       <header className="space-y-3 text-center">
         <GraduationCap className="mx-auto size-10 text-primary" />
-        <h1 className="text-2xl font-semibold tracking-tight">Вітаємо в grind-test</h1>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Спершу оберіть, де зберігати ваші матеріали. Це єдина тека, до якої застосунок
-          матиме доступ: там лежатимуть силабуси, згенеровані конспекти, тести й ваші
-          результати. Більше нічого на диску він не читає.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("setup.title")}</h1>
+        <p className="text-sm leading-relaxed text-muted-foreground">{t("setup.blurb")}</p>
       </header>
 
       <div className="space-y-3">
         <Option
           icon={<FolderOpen className="size-5 text-primary" />}
-          title="Обрати наявну теку"
-          blurb="Якщо сховище вже є — вкажіть його. Підійде і тека, всередині якої лежить vault."
-          action="Обрати теку"
+          title={t("setup.existing.title")}
+          blurb={t("setup.existing.blurb")}
+          action={t("setup.existing.action")}
           busy={busy === "choose"}
           disabled={busy !== null}
           onClick={() => run("choose", api.chooseVault)}
@@ -64,9 +62,9 @@ export function SetupScreen({
 
         <Option
           icon={<FolderPlus className="size-5 text-primary" />}
-          title="Створити нове сховище"
-          blurb="Оберіть, де його створити. Всередині зʼявиться структура тек і приклад силабуса, щоб було видно формат."
-          action="Створити"
+          title={t("setup.create.title")}
+          blurb={t("setup.create.blurb")}
+          action={t("setup.create.action")}
           busy={busy === "create"}
           disabled={busy !== null}
           onClick={() => run("create", api.createVault)}
@@ -74,9 +72,9 @@ export function SetupScreen({
 
         <Option
           icon={<HardDrive className="size-5 text-muted-foreground" />}
-          title="Тримати всередині застосунку"
+          title={t("setup.default.title")}
           blurb={vault.root}
-          action="Використати"
+          action={t("setup.default.action")}
           variant="outline"
           busy={busy === "default"}
           disabled={busy !== null}
@@ -85,7 +83,7 @@ export function SetupScreen({
       </div>
 
       <p className="text-center text-xs leading-relaxed text-muted-foreground">
-        Вибір можна змінити будь-коли — на екрані предметів.
+        {t("setup.footnote")}
       </p>
     </div>
   );

@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useT } from "@/i18n";
+import type { MessageId, Translate } from "@/i18n";
 import { NoteReader } from "@/components/NoteReader";
 import { ReadingSizeControl } from "@/components/ReadingSizeControl";
 import { Badge } from "@/components/ui/badge";
@@ -31,10 +33,10 @@ import { cn } from "@/lib/utils";
 
 type Step = "read" | "open" | "quiz" | "done";
 
-const STEP_LABELS: Record<Exclude<Step, "done">, string> = {
-  read: "Читання",
-  open: "Відкриті питання",
-  quiz: "Квіз",
+const STEP_LABELS: Record<Exclude<Step, "done">, MessageId> = {
+  read: "session.step.read",
+  open: "session.step.open",
+  quiz: "session.step.quiz",
 };
 
 interface Props {
@@ -46,6 +48,7 @@ interface Props {
 }
 
 export function StudySession({ plan: initial, onExit, onFinished, onContinue }: Props) {
+  const t = useT();
   const [step, setStep] = useState<Step>("read");
   const [readIndex, setReadIndex] = useState(0);
   // The plan arrives with notes but usually without questions; the generation call runs
@@ -54,7 +57,7 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
   const [prepareError, setPrepareError] = useState<string | null>(null);
   // Bumped by the retry button; re-runs the effect below without remounting the session.
   const [retry, setRetry] = useState(0);
-  // Set when the last "До питань" was pressed before the questions were ready: reading is
+  // Set when the last forward button was pressed before the questions were ready: reading is
   // finished, so the only thing left to do is wait, and the step advances by itself.
   const [waiting, setWaiting] = useState(false);
   // Restored from the local draft, so re-entering a session brings the typing back.
@@ -155,6 +158,7 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
         openAnswers={openAnswers}
         onDone={onFinished}
         onContinue={onContinue}
+        t={t}
       />
     );
   }
@@ -174,7 +178,7 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
               <span key={value} className="flex items-center gap-2">
                 {index > 0 ? <span className="text-border">/</span> : null}
                 <span className={cn(step === value && "font-medium text-foreground")}>
-                  {STEP_LABELS[value]}
+                  {t(STEP_LABELS[value])}
                 </span>
               </span>
             ))}
@@ -183,7 +187,7 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
             {step === "read" ? <ReadingSizeControl /> : null}
             <Button variant="ghost" size="sm" onClick={onExit}>
               <X className="size-4" />
-              Вийти
+              {t("common.exit")}
             </Button>
           </div>
         </div>
@@ -204,18 +208,18 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
                   {plan.topics[readIndex].topic.id}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
-                  Тема {readIndex + 1} з {plan.topics.length}
+                  {t("session.topicOf", { index: readIndex + 1, total: plan.topics.length })}
                 </span>
                 {digest ? (
                   <Badge variant="secondary" className="gap-1">
                     <Zap className="size-3" />
-                    Стисло
+                    {t("session.digest")}
                   </Badge>
                 ) : null}
                 {plan.topics[readIndex].is_review ? (
                   <Badge variant="secondary" className="gap-1">
                     <Repeat className="size-3" />
-                    Повторення
+                    {t("session.review")}
                   </Badge>
                 ) : null}
               </>
@@ -228,7 +232,7 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
               disabled={readIndex === 0}
             >
               <ChevronLeft className="size-4" />
-              Попередня
+              {t("session.prev")}
             </Button>
             {prepareError && readIndex + 1 === plan.topics.length ? (
               <Button
@@ -239,16 +243,16 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
                 }}
               >
                 <RotateCw className="size-4" />
-                Спробувати ще раз
+                {t("common.retry")}
               </Button>
             ) : (
               <Button onClick={advanceReading} disabled={waiting}>
                 {waiting ? <Loader2 className="size-4 animate-spin" /> : null}
                 {readIndex + 1 < plan.topics.length
-                  ? "Наступна тема"
+                  ? t("session.nextTopic")
                   : waiting
-                    ? "Готуємо питання…"
-                    : "До питань"}
+                    ? t("session.preparing")
+                    : t("session.toQuestions")}
                 {waiting ? null : <ArrowRight className="size-4" />}
               </Button>
             )}
@@ -257,10 +261,7 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
           {prepareError ? (
             <p className="mx-auto flex w-full max-w-3xl items-start gap-2 text-sm text-destructive">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-              <span>
-                Не вдалося згенерувати питання: {prepareError} Конспекти можна читати далі —
-                повторіть спробу, коли дочитаєте.
-              </span>
+              <span>{t("session.prepareFailed", { error: prepareError })}</span>
             </p>
           ) : null}
         </>
@@ -269,13 +270,11 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
           <div className="space-y-1">
             <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
               <PenLine className="size-5 text-primary" />
-              {listAnswer ? "Ключові пункти" : "Відкриті питання"}
+              {listAnswer ? t("session.open.listTitle") : t("session.open.title")}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {listAnswer
-                ? "Перелічіть головне короткими пунктами — зв'язний текст не потрібен, оцінюється лише суть."
-                : "Відповідайте розгорнуто, як на екзамені."}{" "}
-              Розбір побачите наприкінці сесії.
+              {listAnswer ? t("session.open.listBlurb") : t("session.open.blurb")}{" "}
+              {t("session.open.afterwards")}
             </p>
           </div>
 
@@ -301,7 +300,9 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
                       [question.topic_id]: value,
                     }));
                   }}
-                  placeholder={listAnswer ? "Коротко, пунктами…" : "Ваша відповідь…"}
+                  placeholder={
+                    listAnswer ? t("session.open.listPlaceholder") : t("session.open.placeholder")
+                  }
                 />
               </CardContent>
             </Card>
@@ -310,10 +311,10 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
           <div className="flex justify-between border-t border-border pt-6">
             <Button variant="outline" onClick={() => setStep("read")}>
               <ChevronLeft className="size-4" />
-              До конспектів
+              {t("session.toNotes")}
             </Button>
             <Button onClick={() => setStep("quiz")}>
-              До квізу
+              {t("session.toQuiz")}
               <ArrowRight className="size-4" />
             </Button>
           </div>
@@ -323,10 +324,10 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
           <div className="space-y-1">
             <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
               <Sparkles className="size-5 text-primary" />
-              Міні-квіз
+              {t("session.quiz.title")}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Відповіли на {answeredQuiz} з {plan.quiz.length}.
+              {t("session.quiz.answered", { answered: answeredQuiz, total: plan.quiz.length })}
             </p>
           </div>
 
@@ -340,7 +341,7 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
                     <Badge variant="outline" className="font-mono text-[0.7rem]">
                       {question.topic_id}
                     </Badge>
-                    {multi ? <Badge variant="secondary">Декілька правильних</Badge> : null}
+                    {multi ? <Badge variant="secondary">{t("session.multi")}</Badge> : null}
                   </div>
                   <p className="text-sm font-medium leading-snug">
                     {index + 1}. {question.question}
@@ -386,11 +387,11 @@ export function StudySession({ plan: initial, onExit, onFinished, onContinue }: 
           <div className="flex justify-between border-t border-border pt-6">
             <Button variant="outline" onClick={() => setStep("open")}>
               <ChevronLeft className="size-4" />
-              До питань
+              {t("session.backToOpen")}
             </Button>
             <Button onClick={submit} disabled={submitting}>
               {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
-              Завершити сесію
+              {t("session.finish")}
             </Button>
           </div>
         </section>
@@ -405,12 +406,14 @@ function SessionSummary({
   openAnswers,
   onDone,
   onContinue,
+  t,
 }: {
   plan: SessionPlan;
   result: SessionResult;
   openAnswers: Record<string, string>;
   onDone: () => void;
   onContinue: (plan: SessionPlan) => void;
+  t: Translate;
 }) {
   const answersByQuestion = new Map(result.answers.map((answer) => [answer.question_id, answer]));
   const [starting, setStarting] = useState(false);
@@ -443,19 +446,19 @@ function SessionSummary({
     <div className="mx-auto w-full max-w-3xl space-y-6 p-8">
       <Card>
         <CardContent className="space-y-4 py-6 text-center">
-          <p className="text-sm text-muted-foreground">Результат сесії</p>
+          <p className="text-sm text-muted-foreground">{t("session.result")}</p>
           <p className={cn("text-5xl font-semibold tabular-nums", scoreTone(result.overall_score))}>
             {result.overall_score}%
           </p>
           <Progress value={result.overall_score} />
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button variant="outline" onClick={onDone}>
-              До предмета
+              {t("session.toSubject")}
             </Button>
             {settings.pick === "manual" ? null : (
               <Button onClick={next} disabled={starting}>
                 {starting ? <Loader2 className="size-4 animate-spin" /> : null}
-                Продовжити навчання
+                {t("session.continue")}
                 <ArrowRight className="size-4" />
               </Button>
             )}
@@ -464,21 +467,25 @@ function SessionSummary({
       </Card>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold tracking-tight">Теми та наступне повторення</h2>
+        <h2 className="text-sm font-semibold tracking-tight">{t("session.topicsNext")}</h2>
         {result.topics.map((outcome) => (
           <Card key={outcome.topic_id}>
             <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
               <div className="min-w-0 flex-1">
                 <p className="text-sm leading-snug">{outcome.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  {STAGES[outcome.stage].label} · рівень {outcome.level} · повторення{" "}
-                  {formatDue(outcome.due_at)}
+                  {t(STAGES[outcome.stage].label)} ·{" "}
+                  {t("session.level", { level: outcome.level })} ·{" "}
+                  {t("session.nextReview", { due: formatDue(t, outcome.due_at) })}
                 </p>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 {outcome.quiz_total > 0 ? (
                   <span className="text-muted-foreground">
-                    квіз {outcome.quiz_correct}/{outcome.quiz_total}
+                    {t("session.quizScore", {
+                      correct: outcome.quiz_correct,
+                      total: outcome.quiz_total,
+                    })}
                   </span>
                 ) : null}
                 <span className={cn("text-lg font-semibold tabular-nums", scoreTone(outcome.score))}>
@@ -492,7 +499,7 @@ function SessionSummary({
 
       {result.gradings.length > 0 ? (
         <section className="space-y-4">
-          <h2 className="text-sm font-semibold tracking-tight">Розбір відкритих відповідей</h2>
+          <h2 className="text-sm font-semibold tracking-tight">{t("session.openReview")}</h2>
           {result.gradings.map((grading) => {
             const question = plan.open_questions.find((q) => q.topic_id === grading.topic_id);
             return (
@@ -508,16 +515,16 @@ function SessionSummary({
                   <p className="text-sm leading-relaxed text-muted-foreground">{grading.verdict}</p>
 
                   {grading.covered.length > 0 ? (
-                    <PointList icon="check" title="Розкрито" items={grading.covered} />
+                    <PointList icon="check" title={t("session.covered")} items={grading.covered} />
                   ) : null}
                   {grading.missed.length > 0 ? (
-                    <PointList icon="cross" title="Пропущено" items={grading.missed} />
+                    <PointList icon="cross" title={t("session.missed")} items={grading.missed} />
                   ) : null}
 
                   {grading.correction ? (
                     <div className="rounded-4xl border border-border bg-muted/50 p-4">
                       <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Доповнення
+                        {t("session.correction")}
                       </p>
                       <p className="text-sm leading-relaxed">{grading.correction}</p>
                     </div>
@@ -526,7 +533,7 @@ function SessionSummary({
                   {openAnswers[grading.topic_id]?.trim() ? (
                     <details className="text-sm">
                       <summary className="cursor-pointer text-xs uppercase tracking-wide text-muted-foreground">
-                        Ваша відповідь
+                        {t("session.yourAnswer")}
                       </summary>
                       <p className="mt-2 whitespace-pre-wrap leading-relaxed text-muted-foreground">
                         {openAnswers[grading.topic_id]}
@@ -541,7 +548,7 @@ function SessionSummary({
       ) : null}
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold tracking-tight">Розбір квізу</h2>
+        <h2 className="text-sm font-semibold tracking-tight">{t("session.quizReview")}</h2>
         {plan.quiz.map((question, index) => {
           const answer = answersByQuestion.get(question.id);
           const correct = answer?.correct ?? false;

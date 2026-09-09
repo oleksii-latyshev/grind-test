@@ -2,6 +2,10 @@ import { useState } from "react";
 import { Loader2, Play, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useIntl } from "react-intl";
+
+import { useT } from "@/i18n";
+import type { MessageId } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,11 +14,11 @@ import type { Difficulty, Quiz, SubjectDetail } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const COUNTS = [5, 10, 15, 20];
-const DIFFICULTIES: { value: Difficulty; label: string }[] = [
-  { value: "easy", label: "Легкий" },
-  { value: "medium", label: "Середній" },
-  { value: "hard", label: "Складний" },
-  { value: "mixed", label: "Змішаний" },
+const DIFFICULTIES: { value: Difficulty; label: MessageId }[] = [
+  { value: "easy", label: "difficulty.easy" },
+  { value: "medium", label: "difficulty.medium" },
+  { value: "hard", label: "difficulty.hard" },
+  { value: "mixed", label: "difficulty.mixed" },
 ];
 
 interface Props {
@@ -24,6 +28,8 @@ interface Props {
 }
 
 export function QuizzesTab({ detail, onStart, onRefresh }: Props) {
+  const t = useT();
+  const intl = useIntl();
   const [count, setCount] = useState(10);
   const [difficulty, setDifficulty] = useState<Difficulty>("mixed");
   const [generating, setGenerating] = useState(false);
@@ -64,14 +70,11 @@ export function QuizzesTab({ detail, onStart, onRefresh }: Props) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Новий тест</CardTitle>
-          <CardDescription>
-            Питання генеруються швидкою моделлю на основі конспектів. Теми добираються з
-            урахуванням ваших минулих помилок.
-          </CardDescription>
+          <CardTitle>{t("quizzes.new")}</CardTitle>
+          <CardDescription>{t("quizzes.new.blurb")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Field label="Кількість питань">
+          <Field label={t("quizzes.count")}>
             {COUNTS.map((value) => (
               <Choice key={value} active={count === value} onClick={() => setCount(value)}>
                 {value}
@@ -79,14 +82,14 @@ export function QuizzesTab({ detail, onStart, onRefresh }: Props) {
             ))}
           </Field>
 
-          <Field label="Складність">
+          <Field label={t("quizzes.difficulty")}>
             {DIFFICULTIES.map((option) => (
               <Choice
                 key={option.value}
                 active={difficulty === option.value}
                 onClick={() => setDifficulty(option.value)}
               >
-                {option.label}
+                {t(option.label)}
               </Choice>
             ))}
           </Field>
@@ -94,21 +97,19 @@ export function QuizzesTab({ detail, onStart, onRefresh }: Props) {
           <div className="flex items-center gap-3 pt-1">
             <Button onClick={generate} disabled={generating || !ready}>
               {generating ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
-              Згенерувати тест
+              {t("quizzes.generate")}
             </Button>
             {!ready ? (
-              <p className="text-sm text-muted-foreground">
-                Спершу згенеруйте хоча б один конспект на вкладці «Теми».
-              </p>
+              <p className="text-sm text-muted-foreground">{t("quizzes.needNotes")}</p>
             ) : null}
           </div>
         </CardContent>
       </Card>
 
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold tracking-tight">Збережені тести</h3>
+        <h3 className="text-sm font-semibold tracking-tight">{t("quizzes.saved")}</h3>
         {detail.quizzes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Ще немає жодного тесту.</p>
+          <p className="text-sm text-muted-foreground">{t("quizzes.none")}</p>
         ) : (
           <ul className="divide-y divide-border rounded-4xl border border-border">
             {detail.quizzes.map((quiz) => (
@@ -119,11 +120,11 @@ export function QuizzesTab({ detail, onStart, onRefresh }: Props) {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{quiz.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(quiz.created_at).toLocaleString("uk-UA")}
+                    {intl.formatDate(quiz.created_at, { dateStyle: "medium", timeStyle: "short" })}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <Badge variant="secondary">{quiz.question_count} пит.</Badge>
+                  <Badge variant="secondary">{t("quizzes.questions", { count: quiz.question_count })}</Badge>
                   <Button
                     size="sm"
                     variant="outline"
@@ -135,7 +136,7 @@ export function QuizzesTab({ detail, onStart, onRefresh }: Props) {
                     ) : (
                       <Play className="size-4" />
                     )}
-                    Пройти
+                    {t("quizzes.take")}
                   </Button>
                 </div>
               </li>

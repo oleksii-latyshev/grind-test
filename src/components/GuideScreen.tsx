@@ -10,6 +10,8 @@ import {
   Timer,
 } from "lucide-react";
 
+import { useT } from "@/i18n";
+import type { MessageId, Translate } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,117 +32,124 @@ export function GuideScreen({
   /** After setup the button reads as "start"; from the header it reads as "back". */
   firstRun: boolean;
 }) {
+  const t = useT();
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 p-8">
       <header className="space-y-3">
         <div className="flex items-center justify-between">
           {firstRun ? (
             <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              Перший запуск
+              {t("guide.firstRun")}
             </span>
           ) : (
             <Button variant="ghost" size="sm" onClick={onDone} className="-ml-2">
               <ArrowLeft className="size-4" />
-              Назад
+              {t("common.back")}
             </Button>
           )}
           {/* Reachable without scrolling: someone who already knows what a
               spaced-repetition study app is should not have to read to the bottom. */}
           {firstRun ? (
             <Button variant="ghost" size="sm" onClick={onDone}>
-              Пропустити
+              {t("common.skip")}
               <SkipForward className="size-4" />
             </Button>
           ) : null}
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Як це працює</h1>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Застосунок перетворює перелік екзаменаційних питань на власну базу конспектів,
-          проводить вас по них сесіями й запам'ятовує, що саме ви забуваєте.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("guide.title")}</h1>
+        <p className="text-sm leading-relaxed text-muted-foreground">{t("guide.blurb")}</p>
       </header>
 
       <section className="space-y-3">
         <Step
           number={1}
           icon={<FileText className="size-5 text-primary" />}
-          title="Силабус — те, що ви даєте самі"
-          body="Один markdown-файл на предмет у теці syllabus/: заголовок, розділи через ##, під ними нумерований перелік тем. Ім'я файлу стає ідентифікатором предмета. Приклад уже лежить у сховищі."
+          title={t("guide.step1.title")}
+          body={t("guide.step1.body")}
         />
         <Step
           number={2}
           icon={<BrainCircuit className="size-5 text-primary" />}
-          title="Конспекти — генеруються один раз"
-          body="На вкладці «Теми» розумна модель пише конспект для кожної теми: суть, відповідь одним абзацом, механізм, ключові терміни й типові пастки. Це найдорожчий крок, тому кожен конспект зберігається на диску й більше не перегенеровується. Процес можна перервати — зроблене не втрачається."
+          title={t("guide.step2.title")}
+          body={t("guide.step2.body")}
         />
         <Step
           number={3}
           icon={<BookOpenCheck className="size-5 text-primary" />}
-          title="Сесія — те, заради чого все інше"
-          body="2–6 тем за раз. Спершу читаєте конспекти, потім письмово відповідаєте на одне широке питання з кожної теми — як на екзамені — і закріплюєте міні-квізом."
+          title={t("guide.step3.title")}
+          body={t("guide.step3.body")}
         />
         <Step
           number={4}
           icon={<CalendarClock className="size-5 text-primary" />}
-          title="Оцінка й повторення"
-          body="Письмові відповіді перевіряє розумна модель за переліком очікуваних пунктів: що розкрито, що пропущено, чого бракує. Оцінка теми — 60% за письмову частину, 40% за квіз."
+          title={t("guide.step4.title")}
+          body={t("guide.step4.body")}
         />
       </section>
 
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
           <PenLine className="size-4 text-muted-foreground" />
-          Темп сесії
+          {t("guide.pace")}
         </h2>
         <Card>
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="px-4 py-2.5 font-medium">Темп</th>
-                  <th className="px-4 py-2.5 font-medium">Читання</th>
-                  <th className="px-4 py-2.5 font-medium">Відповідь</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Хв/тема</th>
+                  <th className="px-4 py-2.5 font-medium">{t("guide.pace.col.pace")}</th>
+                  <th className="px-4 py-2.5 font-medium">{t("guide.pace.col.reading")}</th>
+                  <th className="px-4 py-2.5 font-medium">{t("guide.pace.col.answer")}</th>
+                  <th className="px-4 py-2.5 text-right font-medium">
+                    {t("guide.pace.col.minutes")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                <Pace mode="full" label="Повний" reading="весь конспект" answer="кілька абзаців" />
-                <Pace mode="balanced" label="Збалансований" reading="весь конспект" answer="короткі пункти" />
-                <Pace mode="sprint" label="Спринт" reading="стислий конспект" answer="короткі пункти" />
+                <Pace
+                  t={t}
+                  mode="full"
+                  label="study.pace.full"
+                  reading="guide.pace.readingFull"
+                  answer="guide.pace.answerEssay"
+                />
+                <Pace
+                  t={t}
+                  mode="balanced"
+                  label="study.pace.balanced"
+                  reading="guide.pace.readingFull"
+                  answer="guide.pace.answerList"
+                />
+                <Pace
+                  t={t}
+                  mode="sprint"
+                  label="study.pace.sprint"
+                  reading="guide.pace.readingDigest"
+                  answer="guide.pace.answerList"
+                />
               </tbody>
             </table>
           </CardContent>
         </Card>
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          Скорочується спершу відповідь, і лише потім читання: конспект, якого ви не бачили,
-          згадати неможливо, тому «Збалансований» віддає есе, а не текст. Питання завжди
-          складаються рівно з того, що вам показали — спринт не спитає про те, чого не було в
-          стислій версії.
-        </p>
+        <p className="text-xs leading-relaxed text-muted-foreground">{t("guide.pace.note")}</p>
       </section>
 
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
           <ListChecks className="size-4 text-muted-foreground" />
-          Добір тем
+          {t("guide.selection")}
         </h2>
         <div className="grid gap-3 sm:grid-cols-3">
-          <Tile
-            title="Автоматично"
-            body="Спершу прострочені повторення, далі нові теми за порядком силабуса."
-          />
-          <Tile
-            title="Як на екзамені"
-            body="По одній темі з кожної частини силабуса, з ухилом до слабших — так, як витягують білет."
-          />
-          <Tile title="Вручну" body="Ви самі знаєте, що саме питатимуть завтра." />
+          <Tile title={t("study.pick.auto")} body={t("study.pick.auto.blurb")} />
+          <Tile title={t("study.pick.spread")} body={t("study.pick.spread.blurb")} />
+          <Tile title={t("study.pick.manual")} body={t("guide.selection.manual")} />
         </div>
       </section>
 
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
           <CalendarClock className="size-4 text-muted-foreground" />
-          Сходинка повторень
+          {t("guide.ladder")}
         </h2>
         <Card>
           <CardContent className="space-y-3 py-5 text-sm leading-relaxed">
@@ -149,16 +158,12 @@ export function GuideScreen({
                 <span key={days} className="flex items-center gap-2">
                   {index > 0 ? <span className="text-border">→</span> : null}
                   <Badge variant="outline" className="tabular-nums">
-                    {days} дн.
+                    {t("guide.ladder.days", { days })}
                   </Badge>
                 </span>
               ))}
             </div>
-            <p className="text-muted-foreground">
-              80% і вище — тема піднімається на сходинку вгору, і наступне повторення
-              відсувається. 60–79% — залишається на місці. Менше 60% — опускається на
-              сходинку вниз і повернеться завтра.
-            </p>
+            <p className="text-muted-foreground">{t("guide.ladder.body")}</p>
           </CardContent>
         </Card>
       </section>
@@ -166,30 +171,18 @@ export function GuideScreen({
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
           <Timer className="size-4 text-muted-foreground" />
-          Дрібниці, які варто знати
+          {t("guide.details")}
         </h2>
         <ul className="space-y-2 text-sm leading-relaxed text-muted-foreground">
-          <li>
-            Сесія записується на диск одразу, тому вихід посеред неї нічого не втрачає —
-            повернутись можна кнопкою «Продовжити». Написане зберігається під час набору.
-          </li>
-          <li>
-            Таймер у шапці рахує підходи по 25 хвилин і нагадує про перерву. Він нічого не
-            перериває.
-          </li>
-          <li>
-            «Моделі» у шапці — вибір моделі для кожного рівня. Конспекти та підказки завжди
-            йдуть розумною, тести й сесії — швидкою.
-          </li>
-          <li>
-            Все, що застосунок пише, лежить у вашій теці звичайними файлами: конспекти —
-            markdown, решта — JSON.
-          </li>
+          <li>{t("guide.details.resume")}</li>
+          <li>{t("guide.details.timer")}</li>
+          <li>{t("guide.details.models")}</li>
+          <li>{t("guide.details.files")}</li>
         </ul>
       </section>
 
       <div className="flex justify-end border-t border-border pt-6">
-        <Button onClick={onDone}>{firstRun ? "Зрозуміло, почнімо" : "Закрити"}</Button>
+        <Button onClick={onDone}>{firstRun ? t("guide.start") : t("common.close")}</Button>
       </div>
     </div>
   );
@@ -227,17 +220,19 @@ function Pace({
   label,
   reading,
   answer,
+  t,
 }: {
   mode: keyof typeof MINUTES_PER_TOPIC;
-  label: string;
-  reading: string;
-  answer: string;
+  label: MessageId;
+  reading: MessageId;
+  answer: MessageId;
+  t: Translate;
 }) {
   return (
     <tr className="border-b border-border last:border-0">
-      <td className="px-4 py-2.5 font-medium">{label}</td>
-      <td className="px-4 py-2.5 text-muted-foreground">{reading}</td>
-      <td className="px-4 py-2.5 text-muted-foreground">{answer}</td>
+      <td className="px-4 py-2.5 font-medium">{t(label)}</td>
+      <td className="px-4 py-2.5 text-muted-foreground">{t(reading)}</td>
+      <td className="px-4 py-2.5 text-muted-foreground">{t(answer)}</td>
       <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
         ≈{MINUTES_PER_TOPIC[mode]}
       </td>

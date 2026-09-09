@@ -2,6 +2,8 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, Lightbulb, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { useT } from "@/i18n";
+import type { MessageId } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +19,7 @@ interface Props {
 }
 
 export function QuizScreen({ quiz, onExit, onFinish }: Props) {
+  const t = useT();
   const [index, setIndex] = useState(0);
   const [selections, setSelections] = useState<Record<string, number[]>>({});
   const [hints, setHints] = useState<Record<string, Hint>>({});
@@ -76,11 +79,15 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
       <header className="space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Питання {index + 1} з {quiz.questions.length} · відповіли {answered}
+            {t("quiz.position", {
+              index: index + 1,
+              total: quiz.questions.length,
+              answered,
+            })}
           </p>
           <Button variant="ghost" size="sm" onClick={onExit}>
             <X className="size-4" />
-            Вийти
+            {t("common.exit")}
           </Button>
         </div>
         <Progress value={((index + 1) / quiz.questions.length) * 100} />
@@ -92,9 +99,9 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
             <Badge variant="outline" className="font-mono text-[0.7rem]">
               {question.topic_id}
             </Badge>
-            <Badge variant="secondary">{difficultyLabel(question.difficulty)}</Badge>
+            <Badge variant="secondary">{t(DIFFICULTY_LABELS[question.difficulty])}</Badge>
             {question.type === "multi" ? (
-              <Badge variant="secondary">Декілька правильних</Badge>
+              <Badge variant="secondary">{t("session.multi")}</Badge>
             ) : null}
           </div>
 
@@ -138,7 +145,7 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
             <div className="space-y-2 rounded-4xl border border-border bg-muted/50 p-4">
               <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <Lightbulb className="size-3.5" />
-                Підказка
+                {t("quiz.hint")}
               </p>
               <p className="text-sm leading-relaxed">{hint.hint}</p>
               {hint.related_concepts.length > 0 ? (
@@ -158,7 +165,7 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
               ) : (
                 <Lightbulb className="size-4" />
               )}
-              Підказка
+              {t("quiz.hint")}
             </Button>
           )}
         </CardContent>
@@ -171,17 +178,17 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
           disabled={index === 0}
         >
           <ChevronLeft className="size-4" />
-          Назад
+          {t("common.back")}
         </Button>
 
         {isLast ? (
           <Button onClick={submit} disabled={submitting}>
             {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
-            Завершити тест
+            {t("quiz.finish")}
           </Button>
         ) : (
           <Button onClick={() => setIndex((value) => value + 1)}>
-            Далі
+            {t("common.next")}
             <ChevronRight className="size-4" />
           </Button>
         )}
@@ -190,15 +197,9 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
   );
 }
 
-function difficultyLabel(difficulty: Quiz["difficulty"]) {
-  switch (difficulty) {
-    case "easy":
-      return "Легке";
-    case "medium":
-      return "Середнє";
-    case "hard":
-      return "Складне";
-    default:
-      return "Змішане";
-  }
-}
+const DIFFICULTY_LABELS: Record<Quiz["difficulty"], MessageId> = {
+  easy: "difficulty.easy",
+  medium: "difficulty.medium",
+  hard: "difficulty.hard",
+  mixed: "difficulty.mixed",
+};

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Coffee, Pause, Play, RotateCcw, Settings2, SkipForward, Timer } from "lucide-react";
 import { toast } from "sonner";
 
+import { useT } from "@/i18n";
+import type { MessageId, Translate } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,20 +18,20 @@ import { POMODORO_LIMITS, formatClock, usePomodoro } from "@/lib/pomodoro";
 import type { Phase, PomodoroSettings } from "@/lib/pomodoro";
 import { cn } from "@/lib/utils";
 
-const PHASES: Record<Phase, { label: string; announce: string; tone: string }> = {
+const PHASES: Record<Phase, { label: MessageId; announce: MessageId; tone: string }> = {
   work: {
-    label: "Робота",
-    announce: "Перерва закінчилась — до роботи.",
+    label: "pomodoro.work",
+    announce: "pomodoro.work.announce",
     tone: "text-primary",
   },
   short: {
-    label: "Перерва",
-    announce: "Час коротко відпочити: встаньте, подивіться у вікно.",
+    label: "pomodoro.short",
+    announce: "pomodoro.short.announce",
     tone: "text-chart-2",
   },
   long: {
-    label: "Довга перерва",
-    announce: "Кілька підходів позаду — зробіть довшу перерву.",
+    label: "pomodoro.long",
+    announce: "pomodoro.long.announce",
     tone: "text-chart-3",
   },
 };
@@ -42,7 +44,10 @@ const PHASES: Record<Phase, { label: string; announce: string; tone: string }> =
  * prevented, and knowing the time passed is enough to prevent it.
  */
 export function Pomodoro() {
-  const timer = usePomodoro((next) => toast(PHASES[next].label, { description: PHASES[next].announce }));
+  const t = useT();
+  const timer = usePomodoro((next) =>
+    toast(t(PHASES[next].label), { description: t(PHASES[next].announce) }),
+  );
   const [open, setOpen] = useState(false);
   const idle = !timer.running && timer.left === timer.total;
 
@@ -53,7 +58,7 @@ export function Pomodoro() {
         size="sm"
         onClick={timer.running ? timer.pause : timer.start}
         className="gap-1.5 px-2"
-        title={timer.running ? "Пауза" : "Запустити таймер"}
+        title={timer.running ? t("pomodoro.pause") : t("pomodoro.start")}
       >
         {timer.phase === "work" ? (
           <Timer className={cn("size-4", !idle && PHASES.work.tone)} />
@@ -68,10 +73,10 @@ export function Pomodoro() {
 
       {idle ? null : (
         <>
-          <Button variant="ghost" size="icon" onClick={timer.reset} title="Спочатку">
+          <Button variant="ghost" size="icon" onClick={timer.reset} title={t("pomodoro.reset")}>
             <RotateCcw className="size-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={timer.skip} title="Наступна фаза">
+          <Button variant="ghost" size="icon" onClick={timer.skip} title={t("pomodoro.skipPhase")}>
             <SkipForward className="size-3.5" />
           </Button>
         </>
@@ -81,7 +86,7 @@ export function Pomodoro() {
         variant="ghost"
         size="icon"
         onClick={() => setOpen(true)}
-        title="Налаштування таймера"
+        title={t("pomodoro.settings")}
       >
         <Settings2 className="size-3.5" />
       </Button>
@@ -89,17 +94,22 @@ export function Pomodoro() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Таймер</DialogTitle>
+            <DialogTitle>{t("pomodoro.title")}</DialogTitle>
             <DialogDescription>
-              Підходів завершено: {timer.round}. Довга перерва — кожні {timer.settings.every}.
+              {t("pomodoro.rounds", { round: timer.round, every: timer.settings.every })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Робота, хв" field="work" settings={timer.settings} onChange={timer.setSettings} />
-            <Field label="Перерва, хв" field="short" settings={timer.settings} onChange={timer.setSettings} />
-            <Field label="Довга перерва, хв" field="long" settings={timer.settings} onChange={timer.setSettings} />
-            <Field label="Підходів до довгої" field="every" settings={timer.settings} onChange={timer.setSettings} />
+            {(["work", "short", "long", "every"] as const).map((field) => (
+              <Field
+                key={field}
+                field={field}
+                settings={timer.settings}
+                onChange={timer.setSettings}
+                t={t}
+              />
+            ))}
           </div>
         </DialogContent>
       </Dialog>
@@ -107,22 +117,29 @@ export function Pomodoro() {
   );
 }
 
+const FIELD_LABELS: Record<keyof PomodoroSettings, MessageId> = {
+  work: "pomodoro.field.work",
+  short: "pomodoro.field.short",
+  long: "pomodoro.field.long",
+  every: "pomodoro.field.every",
+};
+
 function Field({
-  label,
   field,
   settings,
   onChange,
+  t,
 }: {
-  label: string;
   field: keyof PomodoroSettings;
   settings: PomodoroSettings;
   onChange: (settings: PomodoroSettings) => void;
+  t: Translate;
 }) {
   const [min, max] = POMODORO_LIMITS[field];
   return (
     <div className="space-y-1.5">
       <Label htmlFor={`pomodoro-${field}`} className="text-xs">
-        {label}
+        {t(FIELD_LABELS[field])}
       </Label>
       <Input
         id={`pomodoro-${field}`}

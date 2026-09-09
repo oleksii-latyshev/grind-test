@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
+import { useT } from "@/i18n";
 import { ProgressTab } from "@/components/ProgressTab";
 import { QuizzesTab } from "@/components/QuizzesTab";
 import { StudyTab } from "@/components/StudyTab";
@@ -26,6 +27,7 @@ export function SubjectScreen({
   onStartSession,
   onOpenTopic,
 }: Props) {
+  const t = useT();
   const [detail, setDetail] = useState<SubjectDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +45,7 @@ export function SubjectScreen({
       <div className="mx-auto max-w-5xl space-y-4 p-8">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft className="size-4" />
-          Назад
+          {t("common.back")}
         </Button>
         <p className="text-sm text-destructive">{error}</p>
       </div>
@@ -54,7 +56,7 @@ export function SubjectScreen({
     return (
       <div className="flex items-center justify-center gap-2 p-16 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" />
-        Завантаження…
+        {t("app.loading")}
       </div>
     );
   }
@@ -64,7 +66,7 @@ export function SubjectScreen({
       <div className="space-y-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
           <ArrowLeft className="size-4" />
-          Усі предмети
+          {t("subjects.all")}
         </Button>
         <div className="flex items-start gap-3">
           <Badge variant="outline" className="mt-1 font-mono uppercase">
@@ -78,10 +80,10 @@ export function SubjectScreen({
 
       <Tabs defaultValue="study">
         <TabsList>
-          <TabsTrigger value="study">Навчання</TabsTrigger>
-          <TabsTrigger value="topics">Теми</TabsTrigger>
-          <TabsTrigger value="quizzes">Тести</TabsTrigger>
-          <TabsTrigger value="progress">Прогрес</TabsTrigger>
+          <TabsTrigger value="study">{t("tab.study")}</TabsTrigger>
+          <TabsTrigger value="topics">{t("tab.topics")}</TabsTrigger>
+          <TabsTrigger value="quizzes">{t("tab.quizzes")}</TabsTrigger>
+          <TabsTrigger value="progress">{t("tab.progress")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="study" className="pt-6">

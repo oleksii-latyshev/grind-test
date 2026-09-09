@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, BrainCircuit, Loader2, RotateCcw, Save, Zap } from "lucide-react";
 import { toast } from "sonner";
 
+import { useT } from "@/i18n";
+import type { MessageId } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,17 +19,15 @@ import type { ModelInfo, ModelSettings } from "@/lib/types";
 
 type Tier = keyof ModelSettings;
 
-const TIERS: Record<Tier, { title: string; blurb: string; icon: React.ReactNode }> = {
+const TIERS: Record<Tier, { title: MessageId; blurb: MessageId; icon: React.ReactNode }> = {
   smart: {
-    title: "Розумна модель",
-    blurb:
-      "Генерація конспектів, перевірка письмових відповідей і підказки. Викликається рідко, результат зберігається на диску — тут варто платити за якість.",
+    title: "settings.smart",
+    blurb: "settings.smart.blurb",
     icon: <BrainCircuit className="size-5 text-primary" />,
   },
   fast: {
-    title: "Швидка модель",
-    blurb:
-      "Питання для сесій і тести. Викликається постійно, тому має бути дешевою та швидкою.",
+    title: "settings.fast",
+    blurb: "settings.fast.blurb",
     icon: <Zap className="size-5 text-chart-3" />,
   },
 };
@@ -41,6 +41,7 @@ const TIERS: Record<Tier, { title: string; blurb: string; icon: React.ReactNode 
  * which is how Claude, Gemini and anything else `agy` lists all become reachable.
  */
 export function SettingsScreen({ onBack }: { onBack: () => void }) {
+  const t = useT();
   const [chosen, setChosen] = useState<ModelSettings | null>(null);
   const [defaults, setDefaults] = useState<ModelSettings | null>(null);
   const [available, setAvailable] = useState<ModelInfo[] | null>(null);
@@ -69,7 +70,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
     try {
       const choice = await api.setModels(chosen);
       setChosen(choice.models);
-      toast.success("Моделі збережено");
+      toast.success(t("settings.saved"));
     } catch (error) {
       toast.error(errorMessage(error));
     } finally {
@@ -81,7 +82,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
     return (
       <div className="flex items-center justify-center gap-2 p-16 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" />
-        Завантаження…
+        {t("app.loading")}
       </div>
     );
   }
@@ -93,14 +94,10 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
       <div className="space-y-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
           <ArrowLeft className="size-4" />
-          Назад
+          {t("common.back")}
         </Button>
-        <h1 className="text-2xl font-semibold tracking-tight">Моделі</h1>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Кожне завдання назавжди закріплене за своїм рівнем — конспекти й підказки за
-          розумним, тести й сесії за швидким. Обрати можна лише те, яка саме модель стоїть за
-          кожним рівнем.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("settings.title")}</h1>
+        <p className="text-sm leading-relaxed text-muted-foreground">{t("settings.blurb")}</p>
       </div>
 
       {(["smart", "fast"] as const).map((tier) => (
@@ -108,15 +105,17 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {TIERS[tier].icon}
-              {TIERS[tier].title}
+              {t(TIERS[tier].title)}
             </CardTitle>
-            <CardDescription className="leading-relaxed">{TIERS[tier].blurb}</CardDescription>
+            <CardDescription className="leading-relaxed">
+              {t(TIERS[tier].blurb)}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {available === null ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" />
-                Питаємо в `agy`, які моделі доступні…
+                {t("settings.asking")}
               </div>
             ) : available.length > 0 ? (
               <Select
@@ -143,8 +142,8 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
             <div className="space-y-1.5">
               <p className="text-xs text-muted-foreground">
                 {available && available.length === 0
-                  ? "Список моделей отримати не вдалося — введіть ідентифікатор вручну."
-                  : "Або впишіть ідентифікатор вручну:"}
+                  ? t("settings.listFailed")
+                  : t("settings.manual")}
               </p>
               <Input
                 value={chosen[tier]}
@@ -165,12 +164,12 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
       <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
         <Button onClick={save} disabled={saving}>
           {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-          Зберегти
+          {t("common.save")}
         </Button>
         {dirty ? (
           <Button variant="ghost" onClick={() => setChosen(defaults)} disabled={saving}>
             <RotateCcw className="size-4" />
-            Повернути стандартні
+            {t("settings.defaults")}
           </Button>
         ) : null}
       </div>

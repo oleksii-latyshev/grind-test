@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { useIntl } from "react-intl";
 
+import { useT } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -7,6 +9,8 @@ import { api } from "@/lib/api";
 import type { Attempt, SubjectDetail } from "@/lib/types";
 
 export function ProgressTab({ detail }: { detail: SubjectDetail }) {
+  const t = useT();
+  const intl = useIntl();
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const { stats } = detail;
 
@@ -17,15 +21,15 @@ export function ProgressTab({ detail }: { detail: SubjectDetail }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Точність" value={`${stats.accuracy_percent}%`}>
+        <Stat label={t("progress.accuracy")} value={`${stats.accuracy_percent}%`}>
           <Progress value={stats.accuracy_percent} />
         </Stat>
         <Stat
-          label="Відповідей"
+          label={t("progress.answers")}
           value={`${stats.questions_correct}/${stats.questions_answered}`}
         />
         <Stat
-          label="Тем опрацьовано"
+          label={t("progress.practised")}
           value={`${stats.topics_practised}/${stats.topics_total}`}
         >
           <Progress
@@ -36,16 +40,12 @@ export function ProgressTab({ detail }: { detail: SubjectDetail }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Найслабші теми</CardTitle>
-          <CardDescription>
-            Саме ці теми частіше потраплятимуть у наступні тести.
-          </CardDescription>
+          <CardTitle>{t("progress.weakest")}</CardTitle>
+          <CardDescription>{t("progress.weakest.blurb")}</CardDescription>
         </CardHeader>
         <CardContent>
           {stats.weakest.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Пройдіть перший тест, щоб побачити статистику.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("progress.noStats")}</p>
           ) : (
             <ul className="space-y-2">
               {stats.weakest.map((topic) => (
@@ -69,11 +69,11 @@ export function ProgressTab({ detail }: { detail: SubjectDetail }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Історія спроб</CardTitle>
+          <CardTitle>{t("progress.history")}</CardTitle>
         </CardHeader>
         <CardContent>
           {attempts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Ще немає жодної спроби.</p>
+            <p className="text-sm text-muted-foreground">{t("progress.noAttempts")}</p>
           ) : (
             <ul className="divide-y divide-border">
               {attempts.slice(0, 15).map((attempt) => {
@@ -86,7 +86,10 @@ export function ProgressTab({ detail }: { detail: SubjectDetail }) {
                     <div className="min-w-0">
                       <p className="truncate text-sm">{attempt.quiz_title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(attempt.finished_at).toLocaleString("uk-UA")}
+                        {intl.formatDate(attempt.finished_at, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
                       </p>
                     </div>
                     <Badge variant={percent >= 70 ? "default" : "secondary"} className="font-mono">

@@ -1,12 +1,18 @@
+import type { MessageId, Translate } from "@/i18n";
+
 import type { SessionMode, Stage, TopicStudy } from "./types";
 
-/** Ukrainian labels and colour roles for the study ladder, shared by every view. */
-export const STAGES: Record<Stage, { label: string; className: string }> = {
-  new: { label: "Не почато", className: "text-muted-foreground" },
-  reading: { label: "Прочитано", className: "text-chart-2" },
-  learning: { label: "Вивчається", className: "text-chart-2" },
-  review: { label: "Повторення", className: "text-chart-3" },
-  mastered: { label: "Засвоєно", className: "text-primary" },
+/**
+ * Message id and colour role for each rung of the ladder, shared by every view.
+ *
+ * The id rather than the text: the label is translated, the colour is not.
+ */
+export const STAGES: Record<Stage, { label: MessageId; className: string }> = {
+  new: { label: "stage.new", className: "text-muted-foreground" },
+  reading: { label: "stage.reading", className: "text-chart-2" },
+  learning: { label: "stage.learning", className: "text-chart-2" },
+  review: { label: "stage.review", className: "text-chart-3" },
+  mastered: { label: "stage.mastered", className: "text-primary" },
 };
 
 /** Mirrors REVIEW_INTERVALS_DAYS in `src-tauri/src/vault/study.rs`. */
@@ -24,13 +30,13 @@ export function stageOf(entry: TopicStudy | undefined): Stage {
   return "mastered";
 }
 
-export function formatDue(dueAt: string | null): string {
-  if (!dueAt) return "—";
+export function formatDue(t: Translate, dueAt: string | null): string {
+  if (!dueAt) return t("due.none");
   const due = new Date(dueAt);
   const days = Math.round((due.getTime() - Date.now()) / 86_400_000);
-  if (days <= 0) return "сьогодні";
-  if (days === 1) return "завтра";
-  return `через ${days} дн.`;
+  if (days <= 0) return t("due.today");
+  if (days === 1) return t("due.tomorrow");
+  return t("due.days", { days });
 }
 
 export function scoreTone(score: number): string {
@@ -66,8 +72,8 @@ export const MAX_TOPICS: Record<SessionMode, number> = {
   sprint: 10,
 };
 
-export function formatHours(minutes: number): string {
+export function formatHours(t: Translate, minutes: number): string {
   const hours = minutes / 60;
-  if (hours < 1) return `${Math.round(minutes)} хв`;
-  return `${hours < 10 ? hours.toFixed(1) : Math.round(hours)} год`;
+  if (hours < 1) return t("time.minutes", { value: Math.round(minutes) });
+  return t("time.hours", { value: hours < 10 ? hours.toFixed(1) : Math.round(hours) });
 }

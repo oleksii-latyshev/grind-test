@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useT } from "@/i18n";
+import type { MessageId, Translate } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,38 +38,16 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const PACE: Record<SessionMode, { label: string; blurb: string }> = {
-  full: {
-    label: "Повний",
-    blurb:
-      "Повний конспект, розгорнута письмова відповідь як на екзамені, 4 питання квізу на тему.",
-  },
-  balanced: {
-    label: "Збалансований",
-    blurb:
-      "Той самий повний конспект — скорочується не читання, а відповідь: замість тексту короткі пункти, 4 питання квізу на тему.",
-  },
-  sprint: {
-    label: "Спринт",
-    blurb:
-      "Стислий конспект — суть, ключові терміни й типові пастки. Відповідь пунктами, 3 питання квізу на тему.",
-  },
+const PACE: Record<SessionMode, { label: MessageId; blurb: MessageId }> = {
+  full: { label: "study.pace.full", blurb: "study.pace.full.blurb" },
+  balanced: { label: "study.pace.balanced", blurb: "study.pace.balanced.blurb" },
+  sprint: { label: "study.pace.sprint", blurb: "study.pace.sprint.blurb" },
 };
 
-const PICK: Record<TopicPick, { label: string; blurb: string }> = {
-  auto: {
-    label: "Автоматично",
-    blurb: "Спершу прострочені повторення, далі нові теми за порядком силабуса.",
-  },
-  spread: {
-    label: "Як на екзамені",
-    blurb:
-      "По одній темі з кожної частини силабуса — з початку, середини й кінця, як витягують білет. Усередині кожної частини випадково, з ухилом до слабших тем.",
-  },
-  manual: {
-    label: "Обрати теми",
-    blurb: "",
-  },
+const PICK: Record<TopicPick, { label: MessageId; blurb: MessageId | null }> = {
+  auto: { label: "study.pick.auto", blurb: "study.pick.auto.blurb" },
+  spread: { label: "study.pick.spread", blurb: "study.pick.spread.blurb" },
+  manual: { label: "study.pick.manual", blurb: null },
 };
 
 interface Props {
@@ -78,6 +58,7 @@ interface Props {
 export function StudyTab({ detail, onSessionStart }: Props) {
   // Remembered per machine: these three are the same on almost every visit, and re-picking
   // them each time is the friction between deciding to study and studying.
+  const t = useT();
   const [settings, setSettings] = useSessionSettings();
   const { pace, pick, size } = settings;
   const [chosen, setChosen] = useState<string[]>([]);
@@ -104,7 +85,7 @@ export function StudyTab({ detail, onSessionStart }: Props) {
 
   // What is left to cover at least once, and what that costs at each pace.
   const remaining = study.available - study.mastered - study.review;
-  const estimate = (mode: SessionMode) => formatHours(remaining * MINUTES_PER_TOPIC[mode]);
+  const estimate = (mode: SessionMode) => formatHours(t, remaining * MINUTES_PER_TOPIC[mode]);
 
   function changePace(next: SessionMode) {
     // The size steps differ per pace, so the size moves with it rather than being carried
@@ -163,14 +144,14 @@ export function StudyTab({ detail, onSessionStart }: Props) {
             <div className="min-w-0 flex-1 space-y-1">
               <p className="flex items-center gap-2 text-sm font-medium">
                 <History className="size-4 text-chart-3" />
-                Незавершена сесія
+                {t("study.unfinished")}
               </p>
               <p className="line-clamp-1 text-xs text-muted-foreground">
                 {unfinished.topic_titles.join(" · ")}
               </p>
             </div>
             <Button variant="outline" onClick={() => resume(unfinished)} disabled={starting}>
-              Продовжити
+              {t("common.continue")}
             </Button>
           </CardContent>
         </Card>
@@ -180,12 +161,9 @@ export function StudyTab({ detail, onSessionStart }: Props) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <GraduationCap className="size-5 text-primary" />
-            Прогрес вивчення
+            {t("study.progress.title")}
           </CardTitle>
-          <CardDescription>
-            Тема піднімається сходинкою вгору після кожної успішної сесії й повертається на
-            повторення через 1 → 2 → 4 → 7 → 14 → 30 днів.
-          </CardDescription>
+          <CardDescription>{t("study.progress.blurb")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-2">
@@ -194,36 +172,38 @@ export function StudyTab({ detail, onSessionStart }: Props) {
                 {study.progress_percent}%
               </span>
               <span className="text-xs text-muted-foreground">
-                {study.available} тем із конспектами
+                {t("study.withNotes", { count: study.available })}
               </span>
             </div>
             <Progress value={study.progress_percent} />
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Tally label="Не почато" value={study.new} />
-            <Tally label="Вивчається" value={study.learning} tone="text-chart-2" />
-            <Tally label="Повторення" value={study.review} tone="text-chart-3" />
-            <Tally label="Засвоєно" value={study.mastered} tone="text-primary" />
+            <Tally label={t("stage.new")} value={study.new} />
+            <Tally label={t("stage.learning")} value={study.learning} tone="text-chart-2" />
+            <Tally label={t("stage.review")} value={study.review} tone="text-chart-3" />
+            <Tally label={t("stage.mastered")} value={study.mastered} tone="text-primary" />
           </div>
 
           <div className="flex flex-wrap gap-4 border-t border-border pt-4 text-sm">
             <span className="flex items-center gap-2">
               <CalendarClock className="size-4 text-muted-foreground" />
-              До опрацювання зараз: <strong className="tabular-nums">{study.due_now}</strong>
+              {t("study.dueNow")} <strong className="tabular-nums">{study.due_now}</strong>
             </span>
             <span className="flex items-center gap-2">
               <Flame className="size-4 text-muted-foreground" />
-              Сьогодні опрацьовано: <strong className="tabular-nums">{study.studied_today}</strong>
+              {t("study.today")} <strong className="tabular-nums">{study.studied_today}</strong>
             </span>
           </div>
 
           {remaining > 0 ? (
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Залишилось пройти щонайменше раз: <strong>{remaining}</strong> тем — це
-              приблизно <strong>{estimate("full")}</strong> повним режимом,{" "}
-              <strong>{estimate("balanced")}</strong> збалансованим або{" "}
-              <strong>{estimate("sprint")}</strong> спринтом.
+              {t("study.remaining", {
+                count: remaining,
+                full: estimate("full"),
+                balanced: estimate("balanced"),
+                sprint: estimate("sprint"),
+              })}
             </p>
           ) : null}
         </CardContent>
@@ -233,38 +213,35 @@ export function StudyTab({ detail, onSessionStart }: Props) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BookOpenCheck className="size-5 text-primary" />
-            Нова сесія
+            {t("study.new.title")}
           </CardTitle>
-          <CardDescription>
-            Читаєте конспекти, відповідаєте на відкриті питання екзаменаційного формату, потім
-            закріплюєте міні-квізом. Відповіді перевіряє розумна модель.
-          </CardDescription>
+          <CardDescription>{t("study.new.blurb")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Темп
+              {t("study.pace")}
             </p>
             <div className="flex flex-wrap gap-2">
               {(["full", "balanced", "sprint"] as const).map((value) => (
                 <Segment key={value} active={pace === value} onClick={() => changePace(value)}>
-                  {PACE[value].label}
+                  {t(PACE[value].label)}
                 </Segment>
               ))}
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              {PACE[pace].blurb} ≈ {MINUTES_PER_TOPIC[pace]} хв на тему.
+              {t(PACE[pace].blurb)} {t("study.pace.perTopic", { minutes: MINUTES_PER_TOPIC[pace] })}
             </p>
           </div>
 
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Добір тем
+              {t("study.pick")}
             </p>
             <div className="flex flex-wrap gap-2">
               {(["auto", "spread", "manual"] as const).map((value) => (
                 <Segment key={value} active={pick === value} onClick={() => setSettings({ ...settings, pick: value })}>
-                  {PICK[value].label}
+                  {t(PICK[value].label)}
                 </Segment>
               ))}
             </div>
@@ -273,7 +250,7 @@ export function StudyTab({ detail, onSessionStart }: Props) {
           {pick !== "manual" ? (
             <div className="space-y-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Тем за сесію
+                {t("study.size")}
               </p>
               <div className="flex flex-wrap gap-2">
                 {SESSION_SIZES[pace].map((value) => (
@@ -284,10 +261,10 @@ export function StudyTab({ detail, onSessionStart }: Props) {
               </div>
               <p className="text-xs leading-relaxed text-muted-foreground">
                 {pick === "spread"
-                  ? PICK.spread.blurb
+                  ? t("study.pick.spread.blurb")
                   : pace === "sprint"
-                    ? "Спершу теми, яких ви ще не бачили, за порядком силабуса — щоб охопити весь предмет."
-                    : PICK.auto.blurb}
+                    ? t("study.pick.sprint.blurb")
+                    : t("study.pick.auto.blurb")}
               </p>
             </div>
           ) : (
@@ -300,6 +277,7 @@ export function StudyTab({ detail, onSessionStart }: Props) {
               query={query}
               onQuery={setQuery}
               onToggle={toggle}
+              t={t}
             />
           )}
 
@@ -307,20 +285,16 @@ export function StudyTab({ detail, onSessionStart }: Props) {
             <Button onClick={start} disabled={!canStart}>
               {starting ? <Loader2 className="size-4 animate-spin" /> : null}
               {pick === "manual" && chosen.length > 0
-                ? `Почати сесію (${chosen.length})`
-                : "Почати сесію"}
+                ? t("study.start.count", { count: chosen.length })
+                : t("study.start")}
             </Button>
             {!ready ? (
-              <p className="text-sm text-muted-foreground">
-                Спершу згенеруйте конспекти на вкладці «Теми».
-              </p>
+              <p className="text-sm text-muted-foreground">{t("study.needNotes")}</p>
             ) : pick === "auto" && study.due_now === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Усе опрацьовано — або оберіть теми вручну, щоб повторити раніше.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("study.allDone")}</p>
             ) : pick === "manual" && chosen.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Оберіть від однієї до {MAX_TOPICS[pace]} тем.
+                {t("study.pickSome", { max: MAX_TOPICS[pace] })}
               </p>
             ) : null}
           </div>
@@ -339,6 +313,7 @@ function TopicPicker({
   query,
   onQuery,
   onToggle,
+  t,
 }: {
   detail: SubjectDetail;
   withNotes: Set<string>;
@@ -348,6 +323,7 @@ function TopicPicker({
   query: string;
   onQuery: (value: string) => void;
   onToggle: (topic: Topic, checked: boolean) => void;
+  t: Translate;
 }) {
   const needle = query.trim().toLowerCase();
 
@@ -370,17 +346,17 @@ function TopicPicker({
         <Input
           value={query}
           onChange={(event) => onQuery(event.target.value)}
-          placeholder="Пошук за темою…"
+          placeholder={t("study.search")}
           className="max-w-xs"
         />
         <p className="text-xs text-muted-foreground">
-          Обрано {chosen.length} з {maxTopics}
+          {t("study.chosen", { count: chosen.length, max: maxTopics })}
         </p>
       </div>
 
       <ScrollArea className="h-80 rounded-4xl border border-border">
         {sections.length === 0 ? (
-          <p className="p-4 text-sm text-muted-foreground">Нічого не знайдено.</p>
+          <p className="p-4 text-sm text-muted-foreground">{t("study.nothingFound")}</p>
         ) : (
           sections.map((section) => (
             <div key={section.title}>
@@ -410,7 +386,7 @@ function TopicPicker({
                           {topic.id}
                         </Badge>
                         <span className={cn("text-[0.7rem]", STAGES[stage].className)}>
-                          {STAGES[stage].label}
+                          {t(STAGES[stage].label)}
                         </span>
                       </span>
                       <span className="block text-sm leading-snug">{topic.title}</span>

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GuideScreen } from "@/components/GuideScreen";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Pomodoro } from "@/components/Pomodoro";
 import { QuizScreen } from "@/components/QuizScreen";
 import { ReaderScreen } from "@/components/ReaderScreen";
@@ -15,8 +16,10 @@ import { SubjectScreen } from "@/components/SubjectScreen";
 import { SubjectsScreen } from "@/components/SubjectsScreen";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
+import { AppIntlProvider, useLocale, useT } from "@/i18n";
 import { api, errorMessage } from "@/lib/api";
 import { usePreference } from "@/lib/prefs";
+import type { Locale } from "@/i18n";
 import type { AttemptResult, Quiz, SessionPlan, Topic, VaultInfo } from "@/lib/types";
 import "./App.css";
 
@@ -30,7 +33,28 @@ type View =
   | { name: "quiz"; quiz: Quiz }
   | { name: "results"; quiz: Quiz; result: AttemptResult };
 
+/**
+ * The provider has to sit above everything that translates, and `App` itself translates —
+ * so the locale is owned here and the app proper is a child.
+ */
 function App() {
+  const [locale, setLocale] = useLocale();
+
+  return (
+    <AppIntlProvider locale={locale}>
+      <Shell locale={locale} onLocaleChange={setLocale} />
+    </AppIntlProvider>
+  );
+}
+
+function Shell({
+  locale,
+  onLocaleChange,
+}: {
+  locale: Locale;
+  onLocaleChange: (locale: Locale) => void;
+}) {
+  const t = useT();
   const [view, setView] = useState<View>({ name: "subjects" });
   // Owned here rather than in the subjects screen: whether setup has happened decides which
   // screen exists at all, and nothing may read the vault until it has.
@@ -72,6 +96,7 @@ function App() {
           grind-test
         </button>
         <div className="flex items-center gap-1">
+          <LanguageSwitcher locale={locale} onChange={onLocaleChange} />
           {/* In the header rather than inside a session: the clock has to keep running while
               you browse topics or read a note outside one. */}
           {vault?.configured ? <Pomodoro /> : null}
@@ -81,7 +106,7 @@ function App() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setView({ name: "guide" })}
-                title="Як це працює"
+                title={t("app.guide")}
               >
                 <CircleQuestionMark className="size-4" />
               </Button>
@@ -89,7 +114,7 @@ function App() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setView({ name: "settings" })}
-                title="Моделі"
+                title={t("app.models")}
               >
                 <Settings className="size-4" />
               </Button>
@@ -97,7 +122,7 @@ function App() {
           ) : null}
           <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)}>
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-            <span className="sr-only">Змінити тему</span>
+            <span className="sr-only">{t("app.theme")}</span>
           </Button>
         </div>
       </header>
@@ -107,7 +132,7 @@ function App() {
         {vault === null ? (
           <div className="flex items-center justify-center gap-2 p-16 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
-            Завантаження…
+            {t("app.loading")}
           </div>
         ) : !vault.configured ? (
           <SetupScreen vault={vault} onReady={setVault} />

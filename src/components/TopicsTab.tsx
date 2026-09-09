@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { CheckCircle2, Circle, Loader2, Sparkles, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
+import { useT } from "@/i18n";
+import type { Translate } from "@/i18n";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,7 @@ interface RunState {
 }
 
 export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
+  const t = useT();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [run, setRun] = useState<RunState | null>(null);
 
@@ -83,8 +86,12 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
     try {
       const report = await api.generateKnowledge({ subjectId: detail.subject.id, topicIds });
       toast.success(
-        `Готово: ${report.generated} конспектів` +
-          (report.failed ? `, ${report.failed} з помилкою` : ""),
+        report.failed
+          ? t("topics.doneWithErrors", {
+              generated: report.generated,
+              failed: report.failed,
+            })
+          : t("topics.done", { generated: report.generated }),
       );
       setSelected(new Set());
       onRefresh();
@@ -102,20 +109,23 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {covered.size} з {covered.size + missing.length} тем мають конспект
-          {selected.size > 0 ? ` · обрано ${selected.size}` : ""}
+          {t("topics.coverage", {
+            covered: covered.size,
+            total: covered.size + missing.length,
+          })}
+          {selected.size > 0 ? t("topics.selected", { count: selected.size }) : ""}
         </p>
         <div className="flex gap-2">
           {selected.size > 0 ? (
             <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())} disabled={busy}>
-              Скинути вибір
+              {t("topics.clear")}
             </Button>
           ) : null}
           <Button size="sm" onClick={generate} disabled={busy || (selected.size === 0 && missing.length === 0)}>
             {busy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
             {selected.size > 0
-              ? `Згенерувати обрані (${selected.size})`
-              : `Згенерувати всі відсутні (${missing.length})`}
+              ? t("topics.generateSelected", { count: selected.size })
+              : t("topics.generateMissing", { count: missing.length })}
           </Button>
         </div>
       </div>
@@ -123,7 +133,7 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
       {run ? (
         <div className="space-y-2 rounded-4xl border border-border bg-card p-4">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Генерація конспектів (розумна модель)</span>
+            <span>{t("topics.running")}</span>
             <span className="font-mono">
               {run.done}/{run.total}
             </span>
@@ -131,11 +141,13 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
           <Progress value={run.total ? (run.done / run.total) * 100 : 0} />
           {run.active.length > 0 ? (
             <p className="font-mono text-xs text-muted-foreground">
-              У роботі: {run.active.join(", ")}
+              {t("topics.active", { ids: run.active.join(", ") })}
             </p>
           ) : null}
           {run.failed.length > 0 ? (
-            <p className="text-xs text-destructive">Помилок: {run.failed.length}</p>
+            <p className="text-xs text-destructive">
+              {t("topics.failedCount", { count: run.failed.length })}
+            </p>
           ) : null}
         </div>
       ) : null}
@@ -143,7 +155,7 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
       {run?.failed.length ? (
         <Alert variant="destructive">
           <TriangleAlert />
-          <AlertTitle>Деякі теми не згенерувалися</AlertTitle>
+          <AlertTitle>{t("topics.failed.title")}</AlertTitle>
           <AlertDescription>
             <ul className="list-disc pl-4">
               {run.failed.slice(0, 5).map((message) => (
@@ -175,7 +187,7 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
                       checked={selected.has(topic.id)}
                       onCheckedChange={() => toggle(topic.id)}
                       disabled={busy}
-                      aria-label={`Обрати тему ${topic.id}`}
+                      aria-label={t("topics.select", { id: topic.id })}
                     />
                     <button
                       type="button"
@@ -189,7 +201,11 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
                         {topic.title}
                       </span>
                     </button>
-                    <StageMark stage={stageOf(detail.topic_study[topic.id])} hasNote={has} />
+                    <StageMark
+                      stage={stageOf(detail.topic_study[topic.id])}
+                      hasNote={has}
+                      t={t}
+                    />
                   </li>
                 );
               })}
@@ -203,13 +219,13 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
 }
 
 /** Knowledge presence plus how far the student has got with the topic. */
-function StageMark({ stage, hasNote }: { stage: Stage; hasNote: boolean }) {
+function StageMark({ stage, hasNote, t }: { stage: Stage; hasNote: boolean; t: Translate }) {
   if (!hasNote) {
     return <Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground/40" />;
   }
   return (
     <span className="mt-px flex shrink-0 items-center gap-1.5">
-      <span className={cn("text-xs", STAGES[stage].className)}>{STAGES[stage].label}</span>
+      <span className={cn("text-xs", STAGES[stage].className)}>{t(STAGES[stage].label)}</span>
       <CheckCircle2 className={cn("size-4", STAGES[stage].className)} />
     </span>
   );

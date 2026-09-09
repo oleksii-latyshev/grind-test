@@ -214,8 +214,21 @@ other.
 the app.
 
 **Content language is Ukrainian.** Syllabi, knowledge notes, questions, explanations and
-hints must all be Ukrainian. UI chrome is Ukrainian too. Prompts instructing the model are
-written in English but must demand Ukrainian output.
+hints must all be Ukrainian. Prompts instructing the model are written in English but must
+demand Ukrainian output — and that does **not** follow the interface language: the exam is in
+Ukrainian whatever the student sets the chrome to.
+
+**UI chrome is translated** (`react-intl`, Ukrainian default, plus Russian and English).
+Never put a user-visible string in a component — add an id to
+`src/i18n/messages/generate.py` and regenerate:
+
+```bash
+python3 src/i18n/messages/generate.py   # run from the repo root
+```
+
+The three catalogues come from one table so they cannot drift, and `en.ts` defines
+`MessageId`, which types `useT()` — a typo in an id fails to compile. Anything holding a
+label as data (`STAGES`, `PACE`, `DIFFICULTY_LABELS`) stores the id, not the text.
 
 ## Generation must be resumable
 

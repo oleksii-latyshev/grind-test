@@ -1,12 +1,29 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { RotateCcw, TriangleAlert } from "lucide-react";
 
+import { useT } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface Props {
   children: ReactNode;
   onReset: () => void;
+}
+
+// A class component cannot use hooks, and only a class can be an error boundary — so the
+// translated text lives in two small function components instead.
+function ErrorText() {
+  const t = useT();
+  return (
+    <>
+      <h2 className="text-sm font-semibold">{t("error.title")}</h2>
+      <p className="text-sm leading-relaxed text-muted-foreground">{t("error.body")}</p>
+    </>
+  );
+}
+
+function ErrorHomeLabel() {
+  return <>{useT()("error.home")}</>;
 }
 
 interface State {
@@ -40,11 +57,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="flex items-start gap-3">
               <TriangleAlert className="mt-0.5 size-5 shrink-0 text-destructive" />
               <div className="space-y-1">
-                <h2 className="text-sm font-semibold">Щось пішло не так</h2>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  Сталася помилка в інтерфейсі. Незавершена сесія збережена — написані
-                  відповіді відновляться, коли ви повернетесь до неї.
-                </p>
+                <ErrorText />
               </div>
             </div>
 
@@ -59,7 +72,7 @@ export class ErrorBoundary extends Component<Props, State> {
               }}
             >
               <RotateCcw className="size-4" />
-              На головну
+              <ErrorHomeLabel />
             </Button>
           </CardContent>
         </Card>

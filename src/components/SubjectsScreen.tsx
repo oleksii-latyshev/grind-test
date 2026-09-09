@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowRight, FolderOpen, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
+import { useT } from "@/i18n";
+import type { Translate } from "@/i18n";
 import { VaultCard } from "@/components/VaultCard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +22,7 @@ interface Props {
 }
 
 export function SubjectsScreen({ vault, onVaultChange, onOpen }: Props) {
+  const t = useT();
   const [subjects, setSubjects] = useState<SubjectOverview[] | null>(null);
   const [choosing, setChoosing] = useState(false);
 
@@ -47,7 +50,7 @@ export function SubjectsScreen({ vault, onVaultChange, onOpen }: Props) {
       const info = await api.chooseVault();
       onVaultChange(info);
       if (info.readable) {
-        toast.success(`Сховище підключено: ${info.subject_count} предметів`);
+        toast.success(t("vault.connected", { count: info.subject_count }));
       } else if (info.error) {
         toast.error(info.error);
       }
@@ -61,10 +64,8 @@ export function SubjectsScreen({ vault, onVaultChange, onOpen }: Props) {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 p-8">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Предмети</h1>
-        <p className="text-sm text-muted-foreground">
-          Оберіть предмет, згенеруйте конспекти за темами і проходьте тести.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("subjects.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subjects.subtitle")}</p>
       </header>
 
       {!vault.readable ? (
@@ -74,11 +75,8 @@ export function SubjectsScreen({ vault, onVaultChange, onOpen }: Props) {
       {vault.readable && !vault.agy_binary ? (
         <Alert variant="destructive">
           <TriangleAlert />
-          <AlertTitle>CLI `agy` не знайдено</AlertTitle>
-          <AlertDescription>
-            Генерація конспектів і тестів не працюватиме. Встановіть Antigravity CLI або
-            вкажіть шлях у змінній середовища <code>GRIND_AGY_BIN</code>.
-          </AlertDescription>
+          <AlertTitle>{t("agy.missing.title")}</AlertTitle>
+          <AlertDescription>{t("agy.missing.body")}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -91,24 +89,26 @@ export function SubjectsScreen({ vault, onVaultChange, onOpen }: Props) {
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-12 text-center text-sm text-muted-foreground">
             <FolderOpen className="size-6" />
-            <p>У сховищі немає жодного силабуса.</p>
+            <p>{t("subjects.empty")}</p>
             <p className="font-mono text-xs">{vault.root}/syllabus/*.md</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {subjects.map((subject) => (
-            <SubjectCard key={subject.id} subject={subject} onOpen={onOpen} />
+            <SubjectCard key={subject.id} subject={subject} onOpen={onOpen} t={t} />
           ))}
         </div>
       )}
 
       {vault.readable ? (
         <footer className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-          <p className="font-mono text-xs text-muted-foreground">Сховище: {vault.root}</p>
+          <p className="font-mono text-xs text-muted-foreground">
+            {t("vault.label", { root: vault.root })}
+          </p>
           <Button variant="ghost" size="sm" onClick={chooseVault} disabled={choosing}>
             {choosing ? <Loader2 className="size-4 animate-spin" /> : null}
-            Змінити
+            {t("vault.change")}
           </Button>
         </footer>
       ) : null}
@@ -119,9 +119,11 @@ export function SubjectsScreen({ vault, onVaultChange, onOpen }: Props) {
 function SubjectCard({
   subject,
   onOpen,
+  t,
 }: {
   subject: SubjectOverview;
   onOpen: (subjectId: string) => void;
+  t: Translate;
 }) {
   const coverage = subject.topic_count
     ? Math.round((subject.knowledge_count / subject.topic_count) * 100)
@@ -141,7 +143,7 @@ function SubjectCard({
       <CardContent className="flex flex-1 flex-col justify-end gap-4">
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Конспекти</span>
+            <span>{t("subjects.notes")}</span>
             <span className="font-mono">
               {subject.knowledge_count}/{subject.topic_count}
             </span>
@@ -151,16 +153,11 @@ function SubjectCard({
 
         <div className="flex items-center justify-between">
           <div className="flex gap-4 text-xs text-muted-foreground">
-            <span>
-              Тестів: <span className="font-medium text-foreground">{subject.quiz_count}</span>
-            </span>
-            <span>
-              Точність:{" "}
-              <span className="font-medium text-foreground">{subject.accuracy_percent}%</span>
-            </span>
+            <span>{t("subjects.quizzes", { count: subject.quiz_count })}</span>
+            <span>{t("subjects.accuracy", { percent: subject.accuracy_percent })}</span>
           </div>
           <Button size="sm" onClick={() => onOpen(subject.id)}>
-            Відкрити
+            {t("subjects.open")}
             <ArrowRight className="size-4" />
           </Button>
         </div>

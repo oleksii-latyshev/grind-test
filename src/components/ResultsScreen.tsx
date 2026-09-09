@@ -1,5 +1,6 @@
 import { Check, RotateCcw, X } from "lucide-react";
 
+import { useT } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,29 +15,30 @@ interface Props {
 }
 
 export function ResultsScreen({ quiz, result, onBackToSubject }: Props) {
+  const t = useT();
   const byQuestion = new Map(result.attempt.answers.map((answer) => [answer.question_id, answer]));
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 p-8">
       <Card>
         <CardContent className="space-y-4 py-6 text-center">
-          <p className="text-sm text-muted-foreground">Результат</p>
+          <p className="text-sm text-muted-foreground">{t("results.title")}</p>
           <p className="text-5xl font-semibold tabular-nums">{result.score_percent}%</p>
           <p className="text-sm text-muted-foreground">
-            {result.correct} правильних із {result.total}
+            {t("results.correctOf", { correct: result.correct, total: result.total })}
           </p>
           <Progress value={result.score_percent} />
           <div className="flex justify-center gap-2 pt-2">
             <Button onClick={onBackToSubject}>
               <RotateCcw className="size-4" />
-              До предмета
+              {t("session.toSubject")}
             </Button>
           </div>
         </CardContent>
       </Card>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold tracking-tight">Розбір</h2>
+        <h2 className="text-sm font-semibold tracking-tight">{t("results.review")}</h2>
         {quiz.questions.map((question, index) => {
           const answer = byQuestion.get(question.id);
           const selected = answer?.selected ?? [];
@@ -81,7 +83,7 @@ export function ResultsScreen({ quiz, result, onBackToSubject }: Props) {
                       >
                         {option}
                         {isChosen ? (
-                          <span className="ml-2 text-xs text-muted-foreground">(ваш вибір)</span>
+                          <span className="ml-2 text-xs text-muted-foreground">{t("results.yourChoice")}</span>
                         ) : null}
                       </li>
                     );

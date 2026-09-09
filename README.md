@@ -46,9 +46,9 @@ setup, with a skip, and stays available from the header.
 
 ## Language
 
-Code, comments, identifiers and documentation are English. Everything the student reads —
-the UI, study notes, questions, explanations and hints — is Ukrainian, because that is the
-language of the exam.
+The interface speaks Ukrainian, Russian or English — switch it in the header. The *content*
+does not follow: study notes, questions, explanations and hints are always Ukrainian, because
+that is the language of the exam. Code, comments, identifiers and documentation are English.
 
 ## Running it
 

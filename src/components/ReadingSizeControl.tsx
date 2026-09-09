@@ -1,8 +1,10 @@
+import { useT } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { useReadingSize } from "@/lib/reading";
 
 /** The `A` / `A` pair readers put in the corner of a page. */
 export function ReadingSizeControl() {
+  const t = useT();
   const { size, canDecrease, canIncrease, decrease, increase } = useReadingSize();
 
   return (
@@ -13,10 +15,10 @@ export function ReadingSizeControl() {
         className="size-7"
         onClick={decrease}
         disabled={!canDecrease}
-        title="Зменшити шрифт"
+        title={t("reader.smaller")}
       >
         <span className="text-[0.7rem] font-semibold leading-none">A</span>
-        <span className="sr-only">Зменшити шрифт</span>
+        <span className="sr-only">{t("reader.smaller")}</span>
       </Button>
       <span className="w-6 text-center text-xs tabular-nums text-muted-foreground">{size}</span>
       <Button
@@ -25,10 +27,10 @@ export function ReadingSizeControl() {
         className="size-7"
         onClick={increase}
         disabled={!canIncrease}
-        title="Збільшити шрифт"
+        title={t("reader.larger")}
       >
         <span className="text-base font-semibold leading-none">A</span>
-        <span className="sr-only">Збільшити шрифт</span>
+        <span className="sr-only">{t("reader.larger")}</span>
       </Button>
     </div>
   );
