@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { GraduationCap, Loader2, Moon, Settings, Sun } from "lucide-react";
+import { CircleQuestionMark, GraduationCap, Loader2, Moon, Settings, Sun } from "lucide-react";
 import { toast } from "sonner";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { GuideScreen } from "@/components/GuideScreen";
 import { Pomodoro } from "@/components/Pomodoro";
 import { QuizScreen } from "@/components/QuizScreen";
 import { ReaderScreen } from "@/components/ReaderScreen";
@@ -15,12 +16,14 @@ import { SubjectsScreen } from "@/components/SubjectsScreen";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { api, errorMessage } from "@/lib/api";
+import { usePreference } from "@/lib/prefs";
 import type { AttemptResult, Quiz, SessionPlan, Topic, VaultInfo } from "@/lib/types";
 import "./App.css";
 
 type View =
   | { name: "subjects" }
   | { name: "settings" }
+  | { name: "guide" }
   | { name: "subject"; subjectId: string }
   | { name: "reader"; topic: Topic }
   | { name: "session"; plan: SessionPlan }
@@ -32,6 +35,12 @@ function App() {
   // Owned here rather than in the subjects screen: whether setup has happened decides which
   // screen exists at all, and nothing may read the vault until it has.
   const [vault, setVault] = useState<VaultInfo | null>(null);
+  // The guide opens itself once, right after setup; from then on it is a header button.
+  const [guideSeen, setGuideSeen] = usePreference<boolean>(
+    "grind:guide-seen",
+    false,
+    (value): value is boolean => typeof value === "boolean",
+  );
   const [dark, setDark] = useState(
     () =>
       localStorage.getItem("theme") === "dark" ||
@@ -67,14 +76,24 @@ function App() {
               you browse topics or read a note outside one. */}
           {vault?.configured ? <Pomodoro /> : null}
           {vault?.configured ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setView({ name: "settings" })}
-              title="Моделі"
-            >
-              <Settings className="size-4" />
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setView({ name: "guide" })}
+                title="Як це працює"
+              >
+                <CircleQuestionMark className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setView({ name: "settings" })}
+                title="Моделі"
+              >
+                <Settings className="size-4" />
+              </Button>
+            </>
           ) : null}
           <Button variant="ghost" size="icon" onClick={() => setDark((value) => !value)}>
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
@@ -92,6 +111,14 @@ function App() {
           </div>
         ) : !vault.configured ? (
           <SetupScreen vault={vault} onReady={setVault} />
+        ) : !guideSeen || view.name === "guide" ? (
+          <GuideScreen
+            firstRun={!guideSeen}
+            onDone={() => {
+              setGuideSeen(true);
+              setView({ name: "subjects" });
+            }}
+          />
         ) : view.name === "settings" ? (
           <SettingsScreen onBack={() => setView({ name: "subjects" })} />
         ) : view.name === "subjects" ? (

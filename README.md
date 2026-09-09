@@ -41,6 +41,9 @@ quizzes and session questions — and **Моделі** in the header picks which
 resolves to, from whatever `agy models` lists (Gemini, Claude and the rest). Which tier a job
 runs at is fixed: a study note is worth paying for, a quiz is not.
 
+A **Як це працює** page walks through the same pipeline in the app: it opens once after
+setup, with a skip, and stays available from the header.
+
 ## Language
 
 Code, comments, identifiers and documentation are English. Everything the student reads —
