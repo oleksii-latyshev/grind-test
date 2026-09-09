@@ -203,9 +203,14 @@ Tauri events (`generation://progress`). A crash or quit must never lose complete
 
 ## Commands
 
-`bundle.targets` in `tauri.conf.json` must stay a cross-platform list (`app` + `nsis`). Tauri
-filters it to the host platform, so one value serves both macOS and Windows CI legs. Do not
-add `dmg`: its bundler needs Finder automation and fails in a non-interactive shell.
+`bundle.targets` in `tauri.conf.json` must stay a cross-platform list (`app` + `dmg` +
+`nsis`). Tauri filters it to the host platform, so one value serves both macOS and Windows CI
+legs. The `dmg` bundler drives Finder over AppleScript, so it needs a GUI session: it works
+on a normal desktop and on GitHub's macOS runners, and fails over ssh or in a container —
+build `--bundles app` there.
+
+macOS CI builds one `universal-apple-darwin` binary rather than a runner per architecture;
+GitHub retired the `macos-13` Intel image.
 
 ```bash
 bun run dev            # vite only

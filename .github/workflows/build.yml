@@ -16,7 +16,23 @@ jobs:
     name: typecheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      # A `.gitignore` pattern without a slash matches at any depth, which is how the whole
+      # `src-tauri/src/vault/` module stayed out of every commit while the app built fine
+      # locally. Checking that each declared module resolves costs a second and fails here
+      # rather than after three platforms have installed a Rust toolchain.
+      - name: Every declared Rust module is committed
+        run: |
+          missing=0
+          for module in $(sed -n 's/^pub mod \([a-z_]*\);/\1/p' src-tauri/src/lib.rs); do
+            if [ ! -f "src-tauri/src/$module.rs" ] && [ ! -f "src-tauri/src/$module/mod.rs" ]; then
+              echo "::error file=src-tauri/src/lib.rs::module '$module' is declared but not in the repository — check .gitignore"
+              missing=1
+            fi
+          done
+          exit $missing
+
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       # `bun run build` is `tsc && vite build`, so this is the type check too. It needs no
@@ -30,27 +46,27 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: macOS (Apple Silicon)
+          # One universal binary rather than a runner per architecture: GitHub retired the
+          # `macos-13` Intel image, and a universal build covers both Macs from one leg.
+          - label: macOS (universal)
             os: macos-latest
-            rust-target: aarch64-apple-darwin
-            artifact: grind-test-macos-arm64
-          - label: macOS (Intel)
-            os: macos-13
-            rust-target: x86_64-apple-darwin
-            artifact: grind-test-macos-x64
+            rust-target: universal-apple-darwin
+            toolchain-targets: aarch64-apple-darwin,x86_64-apple-darwin
+            artifact: grind-test-macos
           - label: Windows
             os: windows-latest
             rust-target: x86_64-pc-windows-msvc
+            toolchain-targets: x86_64-pc-windows-msvc
             artifact: grind-test-windows-x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: oven-sh/setup-bun@v2
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.rust-target }}
+          targets: ${{ matrix.toolchain-targets }}
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -67,7 +83,7 @@ jobs:
 
       # `upload-artifact` does not preserve the executable bit, which would leave the
       # unpacked .app unable to launch. `ditto` produces the same archive format the App
-      # Store tooling uses and keeps the bundle intact.
+      # Store tooling uses and keeps the bundle intact. The .dmg needs no such care.
       - name: Pack the macOS app
         if: runner.os == 'macOS'
         run: |
@@ -80,7 +96,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}.zip
+          path: |
+            ${{ matrix.artifact }}.zip
+            src-tauri/target/${{ matrix.rust-target }}/release/bundle/dmg/*.dmg
           retention-days: 14
           if-no-files-found: error
 

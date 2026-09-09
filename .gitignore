@@ -23,4 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-vault
+# The personal vault at the repo root. Anchored: a bare `vault` would also match
+# `src-tauri/src/vault/`, the Rust module, and silently keep it out of every commit.
+/vault/

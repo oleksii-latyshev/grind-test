@@ -57,10 +57,10 @@ To build the installable app:
 bun run tauri build   # → src-tauri/target/release/bundle/macos/grind-test.app
 ```
 
-Bundle targets are `app` + `nsis`; Tauri builds only the ones that apply to the host, so
-macOS produces the `.app` and Windows the installer. The `.dmg` target is deliberately absent
-— its bundler drives Finder over AppleScript and fails without automation permission, and a
-locally installed app does not need a disk image.
+Bundle targets are `app` + `dmg` + `nsis`; Tauri builds only the ones that apply to the host,
+so macOS produces the `.app` and the `.dmg` and Windows the installer. The dmg bundler drives
+Finder over AppleScript and so needs a GUI session — on a headless shell (ssh, a container)
+pass `--bundles app` instead.
 
 Note that the dev-time vault path is baked in at compile time, so a build made from this
 checkout keeps reading the `vault/` beside it. Move the repository and you have to rebuild.
@@ -105,9 +105,11 @@ Download a build from the run's **Artifacts** section:
 
 | Artifact | Contents |
 |---|---|
-| `grind-test-macos-arm64` | `.app`, zipped with `ditto` so the bundle stays executable |
-| `grind-test-macos-x64` | same, for Intel Macs |
+| `grind-test-macos` | universal `.dmg`, plus the `.app` zipped with `ditto` so the bundle stays executable |
 | `grind-test-windows-x64` | NSIS `*-setup.exe` |
+
+The macOS leg builds `universal-apple-darwin`, so one download covers Apple Silicon and
+Intel.
 
 Builds are unsigned, so macOS shows an unidentified-developer warning on a downloaded build
 (right-click → Open, once). A CI build has no repository beside it, so it starts with an empty
