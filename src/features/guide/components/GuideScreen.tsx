@@ -12,9 +12,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { MINUTES_PER_TOPIC } from '@/features/study/lib/study';
 import type { MessageId, Translate } from '@/i18n';
 import { useT } from '@/i18n';
-import { MINUTES_PER_TOPIC } from '@/lib/study';
 
 /**
  * What the app does, in the order the student meets it.

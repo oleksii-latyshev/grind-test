@@ -11,10 +11,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { Phase, PomodoroSettings } from '@/features/pomodoro/lib/pomodoro';
+import { formatClock, POMODORO_LIMITS, usePomodoro } from '@/features/pomodoro/lib/pomodoro';
 import type { MessageId, Translate } from '@/i18n';
 import { useT } from '@/i18n';
-import type { Phase, PomodoroSettings } from '@/lib/pomodoro';
-import { formatClock, POMODORO_LIMITS, usePomodoro } from '@/lib/pomodoro';
 import { cn } from '@/lib/utils';
 
 const PHASES: Record<Phase, { label: MessageId; announce: MessageId; tone: string }> = {

@@ -1,12 +1,12 @@
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { ProgressTab } from '@/components/ProgressTab';
-import { QuizzesTab } from '@/components/QuizzesTab';
-import { StudyTab } from '@/components/StudyTab';
-import { TopicsTab } from '@/components/TopicsTab';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { QuizzesTab } from '@/features/quiz/components/QuizzesTab';
+import { StudyTab } from '@/features/study/components/StudyTab/StudyTab';
+import { ProgressTab } from '@/features/subjects/components/ProgressTab';
+import { TopicsTab } from '@/features/subjects/components/TopicsTab';
 import { useT } from '@/i18n';
 import { api, errorMessage } from '@/lib/api';
 import type { Quiz, SessionPlan, SubjectDetail, Topic } from '@/lib/types';

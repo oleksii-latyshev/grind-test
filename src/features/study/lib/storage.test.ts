@@ -6,7 +6,7 @@ import {
   isSessionSettings,
   readSessionSettings,
   type SessionSettings,
-} from './prefs';
+} from './session-settings';
 
 const storage = new Map<string, string>();
 

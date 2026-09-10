@@ -1,6 +1,15 @@
 import type { MessageId, Translate } from '@/i18n';
 
-import type { SessionMode, Stage, TopicStudy } from './types';
+import type { SessionMode, SessionPlan, Stage, TopicStudy } from '@/lib/types';
+
+/**
+ * A session is ready once its questions exist. The generator refuses to return an empty
+ * quiz, so an empty one can only mean the call has not landed yet — no extra flag needed,
+ * and sessions stored before the split still read as ready.
+ */
+export function sessionReady(plan: SessionPlan): boolean {
+  return plan.quiz.length > 0;
+}
 
 /**
  * Message id and colour role for each rung of the ladder, shared by every view.

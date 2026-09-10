@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { Translate } from '@/i18n';
-
+import type { TopicStudy } from '@/lib/types';
 import { formatDue, formatHours, scoreTone, stageOf } from './study';
-import type { TopicStudy } from './types';
 
 const t: Translate = (id, values) => (values ? `${id} ${JSON.stringify(values)}` : id);
 

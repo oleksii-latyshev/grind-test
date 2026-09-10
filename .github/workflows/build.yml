@@ -41,6 +41,22 @@ jobs:
       # Rust toolchain, which makes it the fastest signal on a broken commit.
       - run: bun run build
 
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: e2e/test-results
+          retention-days: 7
+
   app:
     needs: frontend
     uses: ./.github/workflows/app-build.yml

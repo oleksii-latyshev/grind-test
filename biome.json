@@ -31,7 +31,13 @@
         "noNonNullAssertion": "error",
         "useConst": "error",
         "noParameterAssign": "error",
-        "useBlockStatements": "off"
+        "useBlockStatements": "off",
+        "noExcessiveLinesPerFile": {
+          "level": "error",
+          "options": {
+            "maxLines": 300
+          }
+        }
       },
       "a11y": {
         "noLabelWithoutControl": {
@@ -86,6 +92,13 @@
       "includes": ["src/i18n/messages/*.ts"],
       "formatter": {
         "enabled": false
+      },
+      "linter": {
+        "rules": {
+          "style": {
+            "noExcessiveLinesPerFile": "off"
+          }
+        }
       }
     },
     {

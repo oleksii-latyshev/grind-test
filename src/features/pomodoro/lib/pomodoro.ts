@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { usePreference } from './prefs';
+import { usePreference } from '@/lib/prefs';
 
 export type Phase = 'work' | 'short' | 'long';
 

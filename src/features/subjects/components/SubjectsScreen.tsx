@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { VaultCard } from '@/components/VaultCard';
+import { VaultCard } from '@/features/vault/components/VaultCard';
 import type { Translate } from '@/i18n';
 import { useT } from '@/i18n';
 import { api, errorMessage } from '@/lib/api';

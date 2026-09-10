@@ -6,10 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
+import { STAGES, stageOf } from '@/features/study/lib/study';
 import type { Translate } from '@/i18n';
 import { useT } from '@/i18n';
 import { api, errorMessage, onGenerationProgress } from '@/lib/api';
-import { STAGES, stageOf } from '@/lib/study';
 import type { Stage, SubjectDetail, Topic } from '@/lib/types';
 import { cn } from '@/lib/utils';
 

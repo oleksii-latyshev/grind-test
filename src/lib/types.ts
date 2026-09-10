@@ -253,15 +253,6 @@ export interface SessionPlan {
   quiz: Question[];
 }
 
-/**
- * A session is ready once its questions exist. The generator refuses to return an empty
- * quiz, so an empty one can only mean the call has not landed yet — no extra flag needed,
- * and sessions stored before the split still read as ready.
- */
-export function sessionReady(plan: SessionPlan): boolean {
-  return plan.quiz.length > 0;
-}
-
 export interface OpenGrading {
   topic_id: string;
   score: number;

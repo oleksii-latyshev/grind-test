@@ -92,7 +92,7 @@ neither the generation call nor the typing.
 knows better than the ladder which topics the exam is about to ask for. Either way a session
 is capped at `MAX_SESSION_TOPICS`.
 
-Pace, selection and size persist to `localStorage` under one key (`src/lib/prefs.ts`), so the
+Pace, selection and size persist to `localStorage` under one key (`src/features/study/lib/session-settings.ts`), so the
 results screen can offer **Продовжити навчання** and mean literally the same settings. Read
 them back with `readSessionSettings`, never by reassembling the pieces. Hand-picked topics
 are deliberately not persisted: they belong to one subject and one sitting.
@@ -258,14 +258,19 @@ Tauri events (`generation://progress`). A crash or quit must never lose complete
 - In React event handlers, read `event.target.value` into a local before calling `setState`.
   A functional updater runs during the render phase, by which point React has nulled
   `event.currentTarget` — reading it in there throws mid-render and unmounts the whole tree.
-- Keep the ladder thresholds in `src/lib/study.ts` (`stageOf`), never inline in a component.
+- Keep the ladder thresholds in `src/features/study/lib/study.ts` (`stageOf`), never inline in a component.
 
 ## Tests
 
-Frontend logic worth testing lives in `src/lib`, pure, with a `*.test.ts` beside it (`bun test`,
-no DOM). `src-tauri/tests/pipeline.rs` runs syllabus → notes → session → grading against a temp
+Frontend logic worth testing lives in a `lib/` — `src/lib` when shared, `src/features/<name>/lib`
+otherwise — pure, with a `*.test.ts` beside it (`bun test`, no DOM). `src-tauri/tests/pipeline.rs` runs syllabus → notes → session → grading against a temp
 vault with `agy` swapped for a shell script via `GRIND_AGY_BIN`, and asserts the tier of every
 call — the model-economy rule is enforced by that test, not just by this file.
+
+`e2e/` drives the real frontend in Chromium through Vite. `e2e/index.html` installs `mockIPC`
+before importing `src/main.tsx`, and every `invoke` is answered by a per-test handler in Node
+(`e2e/fixtures.ts`), so no test code ships in `src/`. How code is written is in
+`CODE_REQUIREMENTS.md`.
 
 ## Commands
 
@@ -288,6 +293,7 @@ bun run build          # tsc + vite build
 bun run check          # biome lint + format (check:fix to apply)
 bun test               # unit tests beside src/lib
 bun run test:rust      # cargo unit tests + tests/pipeline.rs
+bun run test:e2e       # Playwright; `bunx playwright install chromium` once
 cd src-tauri && cargo check
 cd src-tauri && cargo run -p grind -- knowledge --subject demo
 cd src-tauri && cargo run -p grind -- session --subject demo --size 2
