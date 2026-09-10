@@ -90,10 +90,14 @@ export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
   const canStart =
     ready &&
     !starting &&
-    (pick === "manual" ? chosen.length > 0 : pick === "spread" || study.due_now > 0);
+    (pick === "manual" ? chosen.length > 0 : pick === "spread" || study.due_now + study.new > 0);
 
   // What is left to cover at least once, and what that costs at each pace.
-  const remaining = study.available - study.mastered - study.review;
+  const remaining = study.new;
+  // The headline is coverage — what the student has started. The ladder percentage moves in
+  // steps of one level out of six per topic, so on its own it reads as "nothing done".
+  const started = study.available - study.new;
+  const coverage = study.available > 0 ? Math.round((started / study.available) * 100) : 0;
   const estimate = (mode: SessionMode) => formatHours(t, remaining * MINUTES_PER_TOPIC[mode]);
 
   function changePace(next: SessionMode) {
@@ -190,14 +194,15 @@ export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
         <CardContent className="space-y-5">
           <div className="space-y-2">
             <div className="flex items-baseline justify-between">
-              <span className="text-3xl font-semibold tabular-nums">
-                {study.progress_percent}%
-              </span>
+              <span className="text-3xl font-semibold tabular-nums">{coverage}%</span>
               <span className="text-xs text-muted-foreground">
-                {t("study.withNotes", { count: study.available })}
+                {t("study.started", { started, total: study.available })}
               </span>
             </div>
-            <Progress value={study.progress_percent} />
+            <Progress value={coverage} />
+            <p className="text-xs text-muted-foreground">
+              {t("study.retained", { percent: study.progress_percent })}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -349,7 +354,7 @@ export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
             </Button>
             {!ready ? (
               <p className="text-sm text-muted-foreground">{t("study.needNotes")}</p>
-            ) : pick === "auto" && study.due_now === 0 ? (
+            ) : pick === "auto" && study.due_now + study.new === 0 ? (
               <p className="text-sm text-muted-foreground">{t("study.allDone")}</p>
             ) : pick === "manual" && chosen.length === 0 ? (
               <p className="text-sm text-muted-foreground">

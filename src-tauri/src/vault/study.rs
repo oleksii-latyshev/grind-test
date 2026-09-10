@@ -334,6 +334,8 @@ pub struct StudyOverview {
     pub learning: usize,
     pub review: usize,
     pub mastered: usize,
+    /// Started topics waiting for their review now. Never-studied ones are counted in `new`
+    /// only — adding them here too made "due" look larger than the subject itself.
     pub due_now: usize,
     pub studied_today: usize,
     /// Weighted 0..100 across the whole subject: how much of it is actually learnt.
@@ -373,8 +375,6 @@ pub fn overview(state: &StudyState, subject: &str, candidates: &[&Topic]) -> Stu
             {
                 studied_today += 1;
             }
-        } else {
-            due_now += 1;
         }
     }
 
@@ -639,6 +639,8 @@ mod tests {
         assert_eq!(view.new, 2);
         assert_eq!(view.mastered, 1);
         assert_eq!(view.learning, 1);
+        // Neither studied topic has a review date, and the two unseen ones are `new`, not due.
+        assert_eq!(view.due_now, 0);
         // (6 + 1) out of a ceiling of 4 * 6.
         assert_eq!(view.progress_percent, 29);
     }

@@ -211,6 +211,7 @@ export interface StudyOverview {
   learning: number;
   review: number;
   mastered: number;
+  /** Started topics whose review is due; never-studied ones are only in `new`. */
   due_now: number;
   studied_today: number;
   progress_percent: number;
