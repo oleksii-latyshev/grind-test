@@ -74,7 +74,10 @@ answer — without that, a deliberately terse sprint answer gets marked down for
 drags the whole ladder with it.
 
 A topic's session score is `0.6 × open + 0.4 × quiz` — the written half weighs more because
-it is what the exam actually asks for. That score moves the topic along a Leitner ladder in
+it is what the exam actually asks for. A half left blank is skipped, not failed: it is not
+sent to the grader and not counted, and a topic with both halves blank gets no score at all,
+so its schedule stays untouched — a student short on time must be able to read without
+dragging the ladder down. That score moves the topic along a Leitner ladder in
 `vault/progress/study.json`: pass (≥80) climbs a level, ≥60 holds, below 60 drops one, and
 the new level sets the review date (1 → 2 → 4 → 7 → 14 → 30 days). `study::plan_session`
 serves overdue reviews first, then unseen topics in syllabus order.

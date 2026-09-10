@@ -600,6 +600,14 @@ fn truncate_chars(text: &str, max: usize) -> String {
 mod tests {
     use super::*;
 
+    #[test]
+    fn a_skipped_half_does_not_count_as_zero() {
+        assert_eq!(topic_score(Some(80), Some(50)), Some(68));
+        assert_eq!(topic_score(None, Some(50)), Some(50));
+        assert_eq!(topic_score(Some(80), None), Some(80));
+        assert_eq!(topic_score(None, None), None);
+    }
+
     fn draft(options: Vec<&str>, correct: Vec<usize>) -> QuestionDraft {
         QuestionDraft {
             topic_id: "demo/1.1".into(),
@@ -1010,6 +1018,9 @@ pub struct TopicOutcome {
     pub level: u8,
     pub stage: study::Stage,
     pub due_at: Option<String>,
+    /// Both halves left blank: the topic was read but not scored, and its schedule untouched.
+    #[serde(default)]
+    pub skipped: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1025,6 +1036,18 @@ pub struct SessionResult {
 /// The written answer imitates the exam, so it weighs more than the multiple-choice half.
 const OPEN_WEIGHT: f64 = 0.6;
 
+/// Combine the two halves of a topic's score. A half the student skipped does not count, and
+/// with both skipped there is no score at all — skipping is not evidence of not knowing.
+fn topic_score(open: Option<u32>, quiz: Option<u32>) -> Option<u32> {
+    match (open, quiz) {
+        (Some(open), Some(quiz)) => {
+            Some((open as f64 * OPEN_WEIGHT + quiz as f64 * (1.0 - OPEN_WEIGHT)).round() as u32)
+        }
+        (Some(score), None) | (None, Some(score)) => Some(score),
+        (None, None) => None,
+    }
+}
+
 /// Grade both halves of a session, update mastery and the review schedule, and persist the
 /// whole thing.
 pub async fn finish_session(
@@ -1036,7 +1059,17 @@ pub async fn finish_session(
 ) -> Result<SessionResult> {
     let plan = load_session(vault, subject_id, session_id)?;
 
-    let gradings = if plan.open_questions.is_empty() {
+    // Blank answers never reach the grader: they would only come back as 0, and a session
+    // with nothing written costs no smart call at all.
+    let open_answers: BTreeMap<String, String> = open_answers
+        .into_iter()
+        .filter(|(topic_id, answer)| {
+            !answer.trim().is_empty()
+                && plan.open_questions.iter().any(|q| &q.topic_id == topic_id)
+        })
+        .collect();
+
+    let gradings = if open_answers.is_empty() {
         Vec::new()
     } else {
         grade_open(&plan, &open_answers).await?
@@ -1059,7 +1092,13 @@ pub async fn finish_session(
             }
         })
         .collect();
-    progress::apply_answers(vault, &answers)?;
+    // Unanswered questions stay in the review below but are not recorded as mistakes.
+    let attempted: Vec<progress::AnswerRecord> = answers
+        .iter()
+        .filter(|answer| !answer.selected.is_empty())
+        .cloned()
+        .collect();
+    progress::apply_answers(vault, &attempted)?;
 
     let mut scores = BTreeMap::new();
     let mut outcomes = Vec::new();
@@ -1074,29 +1113,27 @@ pub async fn finish_session(
             answers.iter().filter(|a| &a.topic_id == topic_id).collect();
         let quiz_total = topic_answers.len();
         let quiz_correct = topic_answers.iter().filter(|a| a.correct).count();
-        let quiz_score = (quiz_total > 0)
+        // Not one of the topic's questions touched: the quiz half was skipped, not failed.
+        let quiz_score = topic_answers
+            .iter()
+            .any(|answer| !answer.selected.is_empty())
             .then(|| ((quiz_correct as f64 / quiz_total as f64) * 100.0).round() as u32);
 
-        let score = match (open_score, quiz_score) {
-            (Some(open), Some(quiz)) => {
-                (open as f64 * OPEN_WEIGHT + quiz as f64 * (1.0 - OPEN_WEIGHT)).round() as u32
-            }
-            (Some(open), None) => open,
-            (None, Some(quiz)) => quiz,
-            (None, None) => 0,
-        };
-
-        scores.insert(topic_id.clone(), score);
+        let score = topic_score(open_score, quiz_score);
+        if let Some(score) = score {
+            scores.insert(topic_id.clone(), score);
+        }
         outcomes.push(TopicOutcome {
             topic_id: topic_id.clone(),
             title: entry.topic.title.clone(),
-            score,
+            score: score.unwrap_or(0),
             open_score,
             quiz_correct,
             quiz_total,
             level: 0,
             stage: study::Stage::New,
             due_at: None,
+            skipped: score.is_none(),
         });
     }
 
@@ -1111,11 +1148,15 @@ pub async fn finish_session(
         }
     }
 
-    let overall_score = if outcomes.is_empty() {
+    let scored: Vec<f64> = outcomes
+        .iter()
+        .filter(|outcome| !outcome.skipped)
+        .map(|outcome| outcome.score as f64)
+        .collect();
+    let overall_score = if scored.is_empty() {
         0
     } else {
-        (outcomes.iter().map(|o| o.score as f64).sum::<f64>() / outcomes.len() as f64).round()
-            as u32
+        (scored.iter().sum::<f64>() / scored.len() as f64).round() as u32
     };
 
     let result = SessionResult {
@@ -1135,16 +1176,16 @@ async fn grade_open(
     open_answers: &BTreeMap<String, String>,
 ) -> Result<Vec<OpenGrading>> {
     let mut block = String::new();
-    for (index, question) in plan.open_questions.iter().enumerate() {
+    // Only the answers actually written: `finish_session` has already dropped blank ones.
+    let answered = plan
+        .open_questions
+        .iter()
+        .filter_map(|question| Some((question, open_answers.get(&question.topic_id)?.trim())));
+    for (index, (question, answer)) in answered.enumerate() {
         let note = plan
             .notes
             .iter()
             .find(|note| note.topic_id == question.topic_id);
-        let answer = open_answers
-            .get(&question.topic_id)
-            .map(|value| value.trim())
-            .filter(|value| !value.is_empty())
-            .unwrap_or("(студент не дав відповіді)");
 
         block.push_str(&format!(
             "## Відповідь {} — topic_id: {}\n\n### Питання\n{}\n\n### Очікувані пункти\n{}\n\n### Відповідь студента\n{}\n\n### Конспект теми\n{}\n\n",
@@ -1178,11 +1219,7 @@ async fn grade_open(
         .data
         .gradings
         .into_iter()
-        .filter(|grading| {
-            plan.open_questions
-                .iter()
-                .any(|question| question.topic_id == grading.topic_id)
-        })
+        .filter(|grading| open_answers.contains_key(&grading.topic_id))
         .collect())
 }
 

@@ -103,6 +103,7 @@ pub fn run() {
             commands::resume_study_session,
             commands::finish_study_session,
             commands::mark_topic_read,
+            commands::plan_reading,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

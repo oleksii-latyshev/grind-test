@@ -28,7 +28,8 @@ type View =
   | { name: "settings" }
   | { name: "guide" }
   | { name: "subject"; subjectId: string }
-  | { name: "reader"; topic: Topic }
+  /** `reading` marks a notes-only batch, which can fetch the next one when it is done. */
+  | { name: "reader"; topics: Topic[]; reading?: boolean }
   | { name: "session"; plan: SessionPlan }
   | { name: "quiz"; quiz: Quiz }
   | { name: "results"; quiz: Quiz; result: AttemptResult };
@@ -158,12 +159,18 @@ function Shell({
             onBack={() => setView({ name: "subjects" })}
             onStartQuiz={(quiz) => setView({ name: "quiz", quiz })}
             onStartSession={(plan) => setView({ name: "session", plan })}
-            onOpenTopic={(topic) => setView({ name: "reader", topic })}
+            onOpenTopic={(topic) => setView({ name: "reader", topics: [topic] })}
+            onStartReading={(topics) => setView({ name: "reader", topics, reading: true })}
           />
         ) : view.name === "reader" ? (
           <ReaderScreen
-            topic={view.topic}
-            onBack={() => setView({ name: "subject", subjectId: view.topic.subject })}
+            topics={view.topics}
+            onBack={() => setView({ name: "subject", subjectId: view.topics[0].subject })}
+            onMore={
+              view.reading
+                ? () => api.planReading(view.topics[0].subject, view.topics.length)
+                : undefined
+            }
           />
         ) : view.name === "session" ? (
           <StudySession

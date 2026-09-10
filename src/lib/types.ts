@@ -280,6 +280,8 @@ export interface TopicOutcome {
   level: number;
   stage: Stage;
   due_at: string | null;
+  /** Both halves left blank: read, not scored, schedule untouched. */
+  skipped: boolean;
 }
 
 export interface SessionSummary {

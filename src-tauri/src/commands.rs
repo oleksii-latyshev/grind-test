@@ -513,6 +513,26 @@ pub async fn finish_study_session(
     .map_err(fail)
 }
 
+/// Notes-only reading: topics never opened, one from each part of the syllabus. Disk only,
+/// and nothing is persisted — a topic leaves the pool once it is marked read.
+#[tauri::command]
+pub fn plan_reading(
+    state: State<'_, AppState>,
+    subject_id: String,
+    size: usize,
+) -> CmdResult<Vec<Topic>> {
+    let vault = state.vault();
+    let subject = syllabus::load(&vault, &subject_id).map_err(fail)?;
+    let studiable: Vec<&Topic> = subject
+        .topics()
+        .filter(|topic| knowledge::exists(&vault, topic))
+        .collect();
+    Ok(study::plan_reading(&study::load(&vault), &studiable, size)
+        .into_iter()
+        .map(|planned| planned.topic)
+        .collect())
+}
+
 /// Called when the student finishes reading a note, so a topic they have opened but not yet
 /// been tested on is visibly distinct from one they have never touched.
 #[tauri::command]

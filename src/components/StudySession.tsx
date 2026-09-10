@@ -447,10 +447,16 @@ function SessionSummary({
       <Card>
         <CardContent className="space-y-4 py-6 text-center">
           <p className="text-sm text-muted-foreground">{t("session.result")}</p>
-          <p className={cn("text-5xl font-semibold tabular-nums", scoreTone(result.overall_score))}>
-            {result.overall_score}%
-          </p>
-          <Progress value={result.overall_score} />
+          {result.topics.every((outcome) => outcome.skipped) ? (
+            <p className="text-5xl font-semibold text-muted-foreground">—</p>
+          ) : (
+            <>
+              <p className={cn("text-5xl font-semibold tabular-nums", scoreTone(result.overall_score))}>
+                {result.overall_score}%
+              </p>
+              <Progress value={result.overall_score} />
+            </>
+          )}
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button variant="outline" onClick={onDone}>
               {t("session.toSubject")}
@@ -488,9 +494,13 @@ function SessionSummary({
                     })}
                   </span>
                 ) : null}
-                <span className={cn("text-lg font-semibold tabular-nums", scoreTone(outcome.score))}>
-                  {outcome.score}%
-                </span>
+                {outcome.skipped ? (
+                  <span className="text-sm text-muted-foreground">{t("session.skipped")}</span>
+                ) : (
+                  <span className={cn("text-lg font-semibold tabular-nums", scoreTone(outcome.score))}>
+                    {outcome.score}%
+                  </span>
+                )}
               </div>
             </CardContent>
           </Card>

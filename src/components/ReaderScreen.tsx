@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, FileWarning, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronLeft, FileWarning, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useT } from "@/i18n";
@@ -11,20 +11,28 @@ import { api, errorMessage } from "@/lib/api";
 import type { KnowledgeNote, Topic } from "@/lib/types";
 
 interface Props {
-  topic: Topic;
+  topics: Topic[];
   onBack: () => void;
+  /** Notes-only reading: fetch the next batch once this one is read. Empty means none left. */
+  onMore?: () => Promise<Topic[]>;
 }
 
-/** Standalone reading of one topic, opened from the topic list. */
-export function ReaderScreen({ topic, onBack }: Props) {
+/** Reading without questions — one topic from the topic list, or a notes-only batch. */
+export function ReaderScreen({ topics: initial, onBack, onMore }: Props) {
   const t = useT();
+  const [topics, setTopics] = useState(initial);
+  const [index, setIndex] = useState(0);
   const [note, setNote] = useState<KnowledgeNote | null>(null);
   const [loading, setLoading] = useState(true);
   const [marked, setMarked] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const topic = topics[index];
+  const isLast = index + 1 === topics.length;
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setMarked(false);
     api
       .getKnowledge(topic.subject, topic.id)
       .then((result) => {
@@ -50,6 +58,38 @@ export function ReaderScreen({ topic, onBack }: Props) {
     }
   }
 
+  function go(next: number) {
+    setIndex(next);
+    window.scrollTo({ top: 0 });
+  }
+
+  function nextTopic() {
+    // Fire and forget, as in a study session: bookkeeping must not block reading.
+    api.markTopicRead(topic.id).catch(() => {});
+    go(index + 1);
+  }
+
+  async function more() {
+    if (!onMore) return;
+    setFetching(true);
+    try {
+      // Marked first, so the next batch cannot hand this topic straight back.
+      if (!marked) await api.markTopicRead(topic.id);
+      const next = await onMore();
+      if (next.length === 0) {
+        setMarked(true);
+        toast.info(t("reading.allRead"));
+        return;
+      }
+      setTopics(next);
+      go(0);
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setFetching(false);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 p-8">
       {/* Sits directly under the app header so the size control stays reachable while
@@ -72,16 +112,54 @@ export function ReaderScreen({ topic, onBack }: Props) {
           <NoteReader
             note={note}
             eyebrow={
-              <Badge variant="outline" className="font-mono text-[0.7rem]">
-                {topic.id}
-              </Badge>
+              <>
+                <Badge variant="outline" className="font-mono text-[0.7rem]">
+                  {topic.id}
+                </Badge>
+                {topics.length > 1 ? (
+                  <span className="text-xs text-muted-foreground">
+                    {t("session.topicOf", { index: index + 1, total: topics.length })}
+                  </span>
+                ) : null}
+              </>
             }
           />
-          <div className="mx-auto flex w-full max-w-3xl justify-end border-t border-border pt-6">
-            <Button variant={marked ? "outline" : "default"} onClick={markRead} disabled={marked}>
-              <Check className="size-4" />
-              {marked ? t("reader.marked") : t("reader.markRead")}
-            </Button>
+          <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-end gap-3 border-t border-border pt-6">
+            {topics.length > 1 ? (
+              <Button
+                variant="outline"
+                onClick={() => go(index - 1)}
+                disabled={index === 0}
+                className="mr-auto"
+              >
+                <ChevronLeft className="size-4" />
+                {t("session.prev")}
+              </Button>
+            ) : null}
+            {!isLast ? (
+              <Button onClick={nextTopic}>
+                {t("session.nextTopic")}
+                <ArrowRight className="size-4" />
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant={marked || onMore ? "outline" : "default"}
+                  onClick={markRead}
+                  disabled={marked}
+                >
+                  <Check className="size-4" />
+                  {marked ? t("reader.marked") : t("reader.markRead")}
+                </Button>
+                {onMore ? (
+                  <Button onClick={more} disabled={fetching}>
+                    {fetching ? <Loader2 className="size-4 animate-spin" /> : null}
+                    {t("reading.more")}
+                    <ArrowRight className="size-4" />
+                  </Button>
+                ) : null}
+              </>
+            )}
           </div>
         </>
       ) : (

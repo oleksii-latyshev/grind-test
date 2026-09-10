@@ -282,6 +282,20 @@ pub fn plan_spread(state: &StudyState, candidates: &[&Topic], size: usize) -> Ve
     planned
 }
 
+/// Notes-only reading: the spread, restricted to topics never opened.
+///
+/// The spread alone leans toward the weakest topics, and a session whose tests were skipped
+/// records every topic as 0 — so without this filter a reader who never takes the tests is
+/// served the same notes again and again instead of new ones.
+pub fn plan_reading(state: &StudyState, candidates: &[&Topic], size: usize) -> Vec<PlannedTopic> {
+    let unseen: Vec<&Topic> = candidates
+        .iter()
+        .copied()
+        .filter(|topic| !state.topics.contains_key(&topic.id))
+        .collect();
+    plan_spread(state, &unseen, size)
+}
+
 /// How much a topic needs attention: unseen outranks answered-but-shakily, which outranks
 /// answered well.
 fn need(state: &StudyState, topic: &Topic) -> f64 {
@@ -553,6 +567,42 @@ mod tests {
             .count();
         // 1.2 carries weight 2.1 against 1.1's 0.3, so it should dominate its slice.
         assert!(picks > 120, "weak topic picked only {picks}/200 times");
+    }
+
+    #[test]
+    fn reading_never_serves_a_topic_already_opened() {
+        let topics: Vec<Topic> = (1..=9).map(|i| topic(&format!("demo/1.{i}"))).collect();
+        let refs: Vec<&Topic> = topics.iter().collect();
+
+        let mut state = StudyState::default();
+        // Opened with the tests skipped: exactly what the spread would otherwise favour.
+        for id in ["demo/1.1", "demo/1.5", "demo/1.9"] {
+            state.topics.insert(
+                id.into(),
+                TopicStudy {
+                    topic_id: id.into(),
+                    level: 1,
+                    read_count: 1,
+                    last_score: Some(0),
+                    ..Default::default()
+                },
+            );
+        }
+
+        for _ in 0..50 {
+            let planned = plan_reading(&state, &refs, 3);
+            assert_eq!(planned.len(), 3);
+            assert!(
+                planned.iter().all(|entry| !state.topics.contains_key(&entry.topic.id)),
+                "{:?}",
+                planned.iter().map(|entry| &entry.topic.id).collect::<Vec<_>>()
+            );
+        }
+
+        for topic in &topics {
+            state.topics.entry(topic.id.clone()).or_default();
+        }
+        assert!(plan_reading(&state, &refs, 3).is_empty());
     }
 
     #[test]

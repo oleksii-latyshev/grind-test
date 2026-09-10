@@ -234,9 +234,13 @@ async fn main() -> Result<()> {
             println!("overall: {}%", result.overall_score);
             for outcome in &result.topics {
                 println!(
-                    "\n{} — {}%  (open {:?}, quiz {}/{})\n  level {} [{:?}], next review {}",
+                    "\n{} — {}  (open {:?}, quiz {}/{})\n  level {} [{:?}], next review {}",
                     outcome.topic_id,
-                    outcome.score,
+                    if outcome.skipped {
+                        "skipped".to_string()
+                    } else {
+                        format!("{}%", outcome.score)
+                    },
                     outcome.open_score,
                     outcome.quiz_correct,
                     outcome.quiz_total,

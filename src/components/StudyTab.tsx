@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  BookOpen,
   BookOpenCheck,
   CalendarClock,
   Flame,
@@ -19,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api, errorMessage } from "@/lib/api";
-import { useSessionSettings } from "@/lib/prefs";
+import { usePreference, useSessionSettings } from "@/lib/prefs";
 import type { TopicPick } from "@/lib/prefs";
 import {
   MAX_TOPICS,
@@ -50,12 +51,19 @@ const PICK: Record<TopicPick, { label: MessageId; blurb: MessageId | null }> = {
   manual: { label: "study.pick.manual", blurb: null },
 };
 
+/** Multiples of three, so every batch still draws from the beginning, middle and end. */
+const READING_SIZES = [3, 6, 9];
+
+const isReadingSize = (value: unknown): value is number =>
+  typeof value === "number" && READING_SIZES.includes(value);
+
 interface Props {
   detail: SubjectDetail;
   onSessionStart: (plan: SessionPlan) => void;
+  onReadingStart: (topics: Topic[]) => void;
 }
 
-export function StudyTab({ detail, onSessionStart }: Props) {
+export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
   // Remembered per machine: these three are the same on almost every visit, and re-picking
   // them each time is the friction between deciding to study and studying.
   const t = useT();
@@ -65,6 +73,7 @@ export function StudyTab({ detail, onSessionStart }: Props) {
   const [query, setQuery] = useState("");
   const [starting, setStarting] = useState(false);
   const [unfinished, setUnfinished] = useState<SessionSummary | null>(null);
+  const [readingSize, setReadingSize] = usePreference("grind:reading-size", 3, isReadingSize);
   const { study } = detail;
 
   const withNotes = useMemo(() => new Set(detail.knowledge_topic_ids), [detail]);
@@ -108,6 +117,19 @@ export function StudyTab({ detail, onSessionStart }: Props) {
           topicIds: pick === "manual" ? chosen : undefined,
         }),
       );
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  async function startReading() {
+    setStarting(true);
+    try {
+      const topics = await api.planReading(detail.subject.id, readingSize);
+      if (topics.length === 0) toast.info(t("reading.allRead"));
+      else onReadingStart(topics);
     } catch (error) {
       toast.error(errorMessage(error));
     } finally {
@@ -206,6 +228,43 @@ export function StudyTab({ detail, onSessionStart }: Props) {
               })}
             </p>
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="size-5 text-primary" />
+            {t("reading.title")}
+          </CardTitle>
+          <CardDescription>{t("reading.blurb")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {t("study.size")}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {READING_SIZES.map((value) => (
+                <Segment key={value} active={readingSize === value} onClick={() => setReadingSize(value)}>
+                  {value}
+                </Segment>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+            <Button onClick={startReading} disabled={!ready || starting || study.new === 0}>
+              {starting ? <Loader2 className="size-4 animate-spin" /> : null}
+              {t("reading.start")}
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              {!ready
+                ? t("study.needNotes")
+                : study.new === 0
+                  ? t("reading.allRead")
+                  : t("reading.left", { count: study.new })}
+            </p>
+          </div>
         </CardContent>
       </Card>
 

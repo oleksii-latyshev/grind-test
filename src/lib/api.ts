@@ -21,6 +21,7 @@ import type {
   SessionSummary,
   SubjectDetail,
   SubjectOverview,
+  Topic,
   VaultInfo,
 } from "./types";
 
@@ -139,6 +140,10 @@ export const api = {
     }),
 
   markTopicRead: (topicId: string) => invoke<void>("mark_topic_read", { topicId }),
+
+  /** Notes-only reading: unseen topics spread across the syllabus. Empty once all are read. */
+  planReading: (subjectId: string, size: number) =>
+    invoke<Topic[]>("plan_reading", { subjectId, size }),
 };
 
 export function onGenerationProgress(

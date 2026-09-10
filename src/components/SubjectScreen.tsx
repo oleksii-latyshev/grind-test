@@ -18,6 +18,7 @@ interface Props {
   onStartQuiz: (quiz: Quiz) => void;
   onStartSession: (plan: SessionPlan) => void;
   onOpenTopic: (topic: Topic) => void;
+  onStartReading: (topics: Topic[]) => void;
 }
 
 export function SubjectScreen({
@@ -26,6 +27,7 @@ export function SubjectScreen({
   onStartQuiz,
   onStartSession,
   onOpenTopic,
+  onStartReading,
 }: Props) {
   const t = useT();
   const [detail, setDetail] = useState<SubjectDetail | null>(null);
@@ -87,7 +89,11 @@ export function SubjectScreen({
         </TabsList>
 
         <TabsContent value="study" className="pt-6">
-          <StudyTab detail={detail} onSessionStart={onStartSession} />
+          <StudyTab
+            detail={detail}
+            onSessionStart={onStartSession}
+            onReadingStart={onStartReading}
+          />
         </TabsContent>
         <TabsContent value="topics" className="pt-6">
           <TopicsTab detail={detail} onRefresh={load} onOpenTopic={onOpenTopic} />
