@@ -1,18 +1,17 @@
-import { useMemo, useState } from "react";
-import { CheckCircle2, Circle, Loader2, Sparkles, TriangleAlert } from "lucide-react";
-import { toast } from "sonner";
-
-import { useT } from "@/i18n";
-import type { Translate } from "@/i18n";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Progress } from "@/components/ui/progress";
-import { api, errorMessage, onGenerationProgress } from "@/lib/api";
-import { STAGES, stageOf } from "@/lib/study";
-import type { Stage, SubjectDetail, Topic } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { CheckCircle2, Circle, Loader2, Sparkles, TriangleAlert } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import type { Translate } from '@/i18n';
+import { useT } from '@/i18n';
+import { api, errorMessage, onGenerationProgress } from '@/lib/api';
+import { STAGES, stageOf } from '@/lib/study';
+import type { Stage, SubjectDetail, Topic } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 interface Props {
   detail: SubjectDetail;
@@ -32,16 +31,11 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [run, setRun] = useState<RunState | null>(null);
 
-  const covered = useMemo(
-    () => new Set(detail.knowledge_topic_ids),
-    [detail.knowledge_topic_ids],
-  );
+  const covered = useMemo(() => new Set(detail.knowledge_topic_ids), [detail.knowledge_topic_ids]);
   const missing = useMemo(
     () => detail.subject.sections.flatMap((s) => s.topics).filter((t) => !covered.has(t.id)),
     [detail.subject, covered],
   );
-
-
 
   function toggle(topicId: string) {
     setSelected((current) => {
@@ -61,17 +55,17 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
       setRun((current) => {
         if (!current) return current;
         switch (event.kind) {
-          case "started":
+          case 'started':
             return { ...current, total: event.total };
-          case "topic_started":
+          case 'topic_started':
             return { ...current, active: [...current.active, event.topic_id] };
-          case "topic_done":
+          case 'topic_done':
             return {
               ...current,
               done: event.done,
               active: current.active.filter((id) => id !== event.topic_id),
             };
-          case "topic_failed":
+          case 'topic_failed':
             return {
               ...current,
               active: current.active.filter((id) => id !== event.topic_id),
@@ -87,11 +81,11 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
       const report = await api.generateKnowledge({ subjectId: detail.subject.id, topicIds });
       toast.success(
         report.failed
-          ? t("topics.doneWithErrors", {
+          ? t('topics.doneWithErrors', {
               generated: report.generated,
               failed: report.failed,
             })
-          : t("topics.done", { generated: report.generated }),
+          : t('topics.done', { generated: report.generated }),
       );
       setSelected(new Set());
       onRefresh();
@@ -109,23 +103,32 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {t("topics.coverage", {
+          {t('topics.coverage', {
             covered: covered.size,
             total: covered.size + missing.length,
           })}
-          {selected.size > 0 ? t("topics.selected", { count: selected.size }) : ""}
+          {selected.size > 0 ? t('topics.selected', { count: selected.size }) : ''}
         </p>
         <div className="flex gap-2">
           {selected.size > 0 ? (
-            <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())} disabled={busy}>
-              {t("topics.clear")}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelected(new Set())}
+              disabled={busy}
+            >
+              {t('topics.clear')}
             </Button>
           ) : null}
-          <Button size="sm" onClick={generate} disabled={busy || (selected.size === 0 && missing.length === 0)}>
+          <Button
+            size="sm"
+            onClick={generate}
+            disabled={busy || (selected.size === 0 && missing.length === 0)}
+          >
             {busy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
             {selected.size > 0
-              ? t("topics.generateSelected", { count: selected.size })
-              : t("topics.generateMissing", { count: missing.length })}
+              ? t('topics.generateSelected', { count: selected.size })
+              : t('topics.generateMissing', { count: missing.length })}
           </Button>
         </div>
       </div>
@@ -133,7 +136,7 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
       {run ? (
         <div className="space-y-2 rounded-4xl border border-border bg-card p-4">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{t("topics.running")}</span>
+            <span>{t('topics.running')}</span>
             <span className="font-mono">
               {run.done}/{run.total}
             </span>
@@ -141,12 +144,12 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
           <Progress value={run.total ? (run.done / run.total) * 100 : 0} />
           {run.active.length > 0 ? (
             <p className="font-mono text-xs text-muted-foreground">
-              {t("topics.active", { ids: run.active.join(", ") })}
+              {t('topics.active', { ids: run.active.join(', ') })}
             </p>
           ) : null}
           {run.failed.length > 0 ? (
             <p className="text-xs text-destructive">
-              {t("topics.failedCount", { count: run.failed.length })}
+              {t('topics.failedCount', { count: run.failed.length })}
             </p>
           ) : null}
         </div>
@@ -155,7 +158,7 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
       {run?.failed.length ? (
         <Alert variant="destructive">
           <TriangleAlert />
-          <AlertTitle>{t("topics.failed.title")}</AlertTitle>
+          <AlertTitle>{t('topics.failed.title')}</AlertTitle>
           <AlertDescription>
             <ul className="list-disc pl-4">
               {run.failed.slice(0, 5).map((message) => (
@@ -187,7 +190,7 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
                       checked={selected.has(topic.id)}
                       onCheckedChange={() => toggle(topic.id)}
                       disabled={busy}
-                      aria-label={t("topics.select", { id: topic.id })}
+                      aria-label={t('topics.select', { id: topic.id })}
                     />
                     <button
                       type="button"
@@ -197,15 +200,11 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
                       <Badge variant="outline" className="mt-px shrink-0 font-mono text-[0.7rem]">
                         {topic.index}
                       </Badge>
-                      <span className={cn("text-sm leading-snug", !has && "text-muted-foreground")}>
+                      <span className={cn('text-sm leading-snug', !has && 'text-muted-foreground')}>
                         {topic.title}
                       </span>
                     </button>
-                    <StageMark
-                      stage={stageOf(detail.topic_study[topic.id])}
-                      hasNote={has}
-                      t={t}
-                    />
+                    <StageMark stage={stageOf(detail.topic_study[topic.id])} hasNote={has} t={t} />
                   </li>
                 );
               })}
@@ -213,7 +212,6 @@ export function TopicsTab({ detail, onRefresh, onOpenTopic }: Props) {
           </section>
         ))}
       </div>
-
     </div>
   );
 }
@@ -225,8 +223,8 @@ function StageMark({ stage, hasNote, t }: { stage: Stage; hasNote: boolean; t: T
   }
   return (
     <span className="mt-px flex shrink-0 items-center gap-1.5">
-      <span className={cn("text-xs", STAGES[stage].className)}>{t(STAGES[stage].label)}</span>
-      <CheckCircle2 className={cn("size-4", STAGES[stage].className)} />
+      <span className={cn('text-xs', STAGES[stage].className)}>{t(STAGES[stage].label)}</span>
+      <CheckCircle2 className={cn('size-4', STAGES[stage].className)} />
     </span>
   );
 }

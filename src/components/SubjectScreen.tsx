@@ -1,16 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Loader2 } from "lucide-react";
-
-import { useT } from "@/i18n";
-import { ProgressTab } from "@/components/ProgressTab";
-import { QuizzesTab } from "@/components/QuizzesTab";
-import { StudyTab } from "@/components/StudyTab";
-import { TopicsTab } from "@/components/TopicsTab";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api, errorMessage } from "@/lib/api";
-import type { Quiz, SessionPlan, SubjectDetail, Topic } from "@/lib/types";
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { ProgressTab } from '@/components/ProgressTab';
+import { QuizzesTab } from '@/components/QuizzesTab';
+import { StudyTab } from '@/components/StudyTab';
+import { TopicsTab } from '@/components/TopicsTab';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useT } from '@/i18n';
+import { api, errorMessage } from '@/lib/api';
+import type { Quiz, SessionPlan, SubjectDetail, Topic } from '@/lib/types';
 
 interface Props {
   subjectId: string;
@@ -47,7 +46,7 @@ export function SubjectScreen({
       <div className="mx-auto max-w-5xl space-y-4 p-8">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft className="size-4" />
-          {t("common.back")}
+          {t('common.back')}
         </Button>
         <p className="text-sm text-destructive">{error}</p>
       </div>
@@ -58,7 +57,7 @@ export function SubjectScreen({
     return (
       <div className="flex items-center justify-center gap-2 p-16 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" />
-        {t("app.loading")}
+        {t('app.loading')}
       </div>
     );
   }
@@ -68,7 +67,7 @@ export function SubjectScreen({
       <div className="space-y-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
           <ArrowLeft className="size-4" />
-          {t("subjects.all")}
+          {t('subjects.all')}
         </Button>
         <div className="flex items-start gap-3">
           <Badge variant="outline" className="mt-1 font-mono uppercase">
@@ -82,10 +81,10 @@ export function SubjectScreen({
 
       <Tabs defaultValue="study">
         <TabsList>
-          <TabsTrigger value="study">{t("tab.study")}</TabsTrigger>
-          <TabsTrigger value="topics">{t("tab.topics")}</TabsTrigger>
-          <TabsTrigger value="quizzes">{t("tab.quizzes")}</TabsTrigger>
-          <TabsTrigger value="progress">{t("tab.progress")}</TabsTrigger>
+          <TabsTrigger value="study">{t('tab.study')}</TabsTrigger>
+          <TabsTrigger value="topics">{t('tab.topics')}</TabsTrigger>
+          <TabsTrigger value="quizzes">{t('tab.quizzes')}</TabsTrigger>
+          <TabsTrigger value="progress">{t('tab.progress')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="study" className="pt-6">

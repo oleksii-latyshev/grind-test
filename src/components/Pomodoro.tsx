@@ -1,38 +1,37 @@
-import { useState } from "react";
-import { Coffee, Pause, Play, RotateCcw, Settings2, SkipForward, Timer } from "lucide-react";
-import { toast } from "sonner";
-
-import { useT } from "@/i18n";
-import type { MessageId, Translate } from "@/i18n";
-import { Button } from "@/components/ui/button";
+import { Coffee, Pause, Play, RotateCcw, Settings2, SkipForward, Timer } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { POMODORO_LIMITS, formatClock, usePomodoro } from "@/lib/pomodoro";
-import type { Phase, PomodoroSettings } from "@/lib/pomodoro";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import type { MessageId, Translate } from '@/i18n';
+import { useT } from '@/i18n';
+import type { Phase, PomodoroSettings } from '@/lib/pomodoro';
+import { formatClock, POMODORO_LIMITS, usePomodoro } from '@/lib/pomodoro';
+import { cn } from '@/lib/utils';
 
 const PHASES: Record<Phase, { label: MessageId; announce: MessageId; tone: string }> = {
   work: {
-    label: "pomodoro.work",
-    announce: "pomodoro.work.announce",
-    tone: "text-primary",
+    label: 'pomodoro.work',
+    announce: 'pomodoro.work.announce',
+    tone: 'text-primary',
   },
   short: {
-    label: "pomodoro.short",
-    announce: "pomodoro.short.announce",
-    tone: "text-chart-2",
+    label: 'pomodoro.short',
+    announce: 'pomodoro.short.announce',
+    tone: 'text-chart-2',
   },
   long: {
-    label: "pomodoro.long",
-    announce: "pomodoro.long.announce",
-    tone: "text-chart-3",
+    label: 'pomodoro.long',
+    announce: 'pomodoro.long.announce',
+    tone: 'text-chart-3',
   },
 };
 
@@ -58,14 +57,14 @@ export function Pomodoro() {
         size="sm"
         onClick={timer.running ? timer.pause : timer.start}
         className="gap-1.5 px-2"
-        title={timer.running ? t("pomodoro.pause") : t("pomodoro.start")}
+        title={timer.running ? t('pomodoro.pause') : t('pomodoro.start')}
       >
-        {timer.phase === "work" ? (
-          <Timer className={cn("size-4", !idle && PHASES.work.tone)} />
+        {timer.phase === 'work' ? (
+          <Timer className={cn('size-4', !idle && PHASES.work.tone)} />
         ) : (
-          <Coffee className={cn("size-4", PHASES[timer.phase].tone)} />
+          <Coffee className={cn('size-4', PHASES[timer.phase].tone)} />
         )}
-        <span className={cn("font-mono text-xs tabular-nums", !idle && PHASES[timer.phase].tone)}>
+        <span className={cn('font-mono text-xs tabular-nums', !idle && PHASES[timer.phase].tone)}>
           {formatClock(timer.left)}
         </span>
         {timer.running ? <Pause className="size-3" /> : <Play className="size-3" />}
@@ -73,10 +72,10 @@ export function Pomodoro() {
 
       {idle ? null : (
         <>
-          <Button variant="ghost" size="icon" onClick={timer.reset} title={t("pomodoro.reset")}>
+          <Button variant="ghost" size="icon" onClick={timer.reset} title={t('pomodoro.reset')}>
             <RotateCcw className="size-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={timer.skip} title={t("pomodoro.skipPhase")}>
+          <Button variant="ghost" size="icon" onClick={timer.skip} title={t('pomodoro.skipPhase')}>
             <SkipForward className="size-3.5" />
           </Button>
         </>
@@ -86,7 +85,7 @@ export function Pomodoro() {
         variant="ghost"
         size="icon"
         onClick={() => setOpen(true)}
-        title={t("pomodoro.settings")}
+        title={t('pomodoro.settings')}
       >
         <Settings2 className="size-3.5" />
       </Button>
@@ -94,14 +93,14 @@ export function Pomodoro() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("pomodoro.title")}</DialogTitle>
+            <DialogTitle>{t('pomodoro.title')}</DialogTitle>
             <DialogDescription>
-              {t("pomodoro.rounds", { round: timer.round, every: timer.settings.every })}
+              {t('pomodoro.rounds', { round: timer.round, every: timer.settings.every })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-4">
-            {(["work", "short", "long", "every"] as const).map((field) => (
+            {(['work', 'short', 'long', 'every'] as const).map((field) => (
               <Field
                 key={field}
                 field={field}
@@ -118,10 +117,10 @@ export function Pomodoro() {
 }
 
 const FIELD_LABELS: Record<keyof PomodoroSettings, MessageId> = {
-  work: "pomodoro.field.work",
-  short: "pomodoro.field.short",
-  long: "pomodoro.field.long",
-  every: "pomodoro.field.every",
+  work: 'pomodoro.field.work',
+  short: 'pomodoro.field.short',
+  long: 'pomodoro.field.long',
+  every: 'pomodoro.field.every',
 };
 
 function Field({

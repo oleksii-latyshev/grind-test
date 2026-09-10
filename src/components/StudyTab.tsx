@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
   BookOpenCheck,
@@ -7,55 +6,49 @@ import {
   GraduationCap,
   History,
   Loader2,
-} from "lucide-react";
-import { toast } from "sonner";
-
-import { useT } from "@/i18n";
-import type { MessageId, Translate } from "@/i18n";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { api, errorMessage } from "@/lib/api";
-import { usePreference, useSessionSettings } from "@/lib/prefs";
-import type { TopicPick } from "@/lib/prefs";
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import type { MessageId, Translate } from '@/i18n';
+import { useT } from '@/i18n';
+import { api, errorMessage } from '@/lib/api';
+import type { TopicPick } from '@/lib/prefs';
+import { usePreference, useSessionSettings } from '@/lib/prefs';
 import {
+  formatHours,
   MAX_TOPICS,
   MINUTES_PER_TOPIC,
   SESSION_SIZES,
   STAGES,
-  formatHours,
   stageOf,
-} from "@/lib/study";
-import type {
-  SessionMode,
-  SessionPlan,
-  SessionSummary,
-  SubjectDetail,
-  Topic,
-} from "@/lib/types";
-import { cn } from "@/lib/utils";
+} from '@/lib/study';
+import type { SessionMode, SessionPlan, SessionSummary, SubjectDetail, Topic } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const PACE: Record<SessionMode, { label: MessageId; blurb: MessageId }> = {
-  full: { label: "study.pace.full", blurb: "study.pace.full.blurb" },
-  balanced: { label: "study.pace.balanced", blurb: "study.pace.balanced.blurb" },
-  sprint: { label: "study.pace.sprint", blurb: "study.pace.sprint.blurb" },
+  full: { label: 'study.pace.full', blurb: 'study.pace.full.blurb' },
+  balanced: { label: 'study.pace.balanced', blurb: 'study.pace.balanced.blurb' },
+  sprint: { label: 'study.pace.sprint', blurb: 'study.pace.sprint.blurb' },
 };
 
 const PICK: Record<TopicPick, { label: MessageId; blurb: MessageId | null }> = {
-  auto: { label: "study.pick.auto", blurb: "study.pick.auto.blurb" },
-  spread: { label: "study.pick.spread", blurb: "study.pick.spread.blurb" },
-  manual: { label: "study.pick.manual", blurb: null },
+  auto: { label: 'study.pick.auto', blurb: 'study.pick.auto.blurb' },
+  spread: { label: 'study.pick.spread', blurb: 'study.pick.spread.blurb' },
+  manual: { label: 'study.pick.manual', blurb: null },
 };
 
 /** Multiples of three, so every batch still draws from the beginning, middle and end. */
 const READING_SIZES = [3, 6, 9];
 
 const isReadingSize = (value: unknown): value is number =>
-  typeof value === "number" && READING_SIZES.includes(value);
+  typeof value === 'number' && READING_SIZES.includes(value);
 
 interface Props {
   detail: SubjectDetail;
@@ -70,10 +63,10 @@ export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
   const [settings, setSettings] = useSessionSettings();
   const { pace, pick, size } = settings;
   const [chosen, setChosen] = useState<string[]>([]);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [starting, setStarting] = useState(false);
   const [unfinished, setUnfinished] = useState<SessionSummary | null>(null);
-  const [readingSize, setReadingSize] = usePreference("grind:reading-size", 3, isReadingSize);
+  const [readingSize, setReadingSize] = usePreference('grind:reading-batch', 3, isReadingSize);
   const { study } = detail;
 
   const withNotes = useMemo(() => new Set(detail.knowledge_topic_ids), [detail]);
@@ -90,7 +83,7 @@ export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
   const canStart =
     ready &&
     !starting &&
-    (pick === "manual" ? chosen.length > 0 : pick === "spread" || study.due_now + study.new > 0);
+    (pick === 'manual' ? chosen.length > 0 : pick === 'spread' || study.due_now + study.new > 0);
 
   // What is left to cover at least once, and what that costs at each pace.
   const remaining = study.new;
@@ -115,10 +108,10 @@ export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
       onSessionStart(
         await api.planStudySession({
           subjectId: detail.subject.id,
-          size: pick === "manual" ? chosen.length : size,
+          size: pick === 'manual' ? chosen.length : size,
           mode: pace,
-          selection: pick === "spread" ? "spread" : "scheduled",
-          topicIds: pick === "manual" ? chosen : undefined,
+          selection: pick === 'spread' ? 'spread' : 'scheduled',
+          topicIds: pick === 'manual' ? chosen : undefined,
         }),
       );
     } catch (error) {
@@ -132,7 +125,7 @@ export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
     setStarting(true);
     try {
       const topics = await api.planReading(detail.subject.id, readingSize);
-      if (topics.length === 0) toast.info(t("reading.allRead"));
+      if (topics.length === 0) toast.info(t('reading.allRead'));
       else onReadingStart(topics);
     } catch (error) {
       toast.error(errorMessage(error));
@@ -170,14 +163,14 @@ export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
             <div className="min-w-0 flex-1 space-y-1">
               <p className="flex items-center gap-2 text-sm font-medium">
                 <History className="size-4 text-chart-3" />
-                {t("study.unfinished")}
+                {t('study.unfinished')}
               </p>
               <p className="line-clamp-1 text-xs text-muted-foreground">
-                {unfinished.topic_titles.join(" · ")}
+                {unfinished.topic_titles.join(' · ')}
               </p>
             </div>
             <Button variant="outline" onClick={() => resume(unfinished)} disabled={starting}>
-              {t("common.continue")}
+              {t('common.continue')}
             </Button>
           </CardContent>
         </Card>
@@ -187,49 +180,49 @@ export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <GraduationCap className="size-5 text-primary" />
-            {t("study.progress.title")}
+            {t('study.progress.title')}
           </CardTitle>
-          <CardDescription>{t("study.progress.blurb")}</CardDescription>
+          <CardDescription>{t('study.progress.blurb')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-2">
             <div className="flex items-baseline justify-between">
               <span className="text-3xl font-semibold tabular-nums">{coverage}%</span>
               <span className="text-xs text-muted-foreground">
-                {t("study.started", { started, total: study.available })}
+                {t('study.started', { started, total: study.available })}
               </span>
             </div>
             <Progress value={coverage} />
             <p className="text-xs text-muted-foreground">
-              {t("study.retained", { percent: study.progress_percent })}
+              {t('study.retained', { percent: study.progress_percent })}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Tally label={t("stage.new")} value={study.new} />
-            <Tally label={t("stage.learning")} value={study.learning} tone="text-chart-2" />
-            <Tally label={t("stage.review")} value={study.review} tone="text-chart-3" />
-            <Tally label={t("stage.mastered")} value={study.mastered} tone="text-primary" />
+            <Tally label={t('stage.new')} value={study.new} />
+            <Tally label={t('stage.learning')} value={study.learning} tone="text-chart-2" />
+            <Tally label={t('stage.review')} value={study.review} tone="text-chart-3" />
+            <Tally label={t('stage.mastered')} value={study.mastered} tone="text-primary" />
           </div>
 
           <div className="flex flex-wrap gap-4 border-t border-border pt-4 text-sm">
             <span className="flex items-center gap-2">
               <CalendarClock className="size-4 text-muted-foreground" />
-              {t("study.dueNow")} <strong className="tabular-nums">{study.due_now}</strong>
+              {t('study.dueNow')} <strong className="tabular-nums">{study.due_now}</strong>
             </span>
             <span className="flex items-center gap-2">
               <Flame className="size-4 text-muted-foreground" />
-              {t("study.today")} <strong className="tabular-nums">{study.studied_today}</strong>
+              {t('study.today')} <strong className="tabular-nums">{study.studied_today}</strong>
             </span>
           </div>
 
           {remaining > 0 ? (
             <p className="text-xs leading-relaxed text-muted-foreground">
-              {t("study.remaining", {
+              {t('study.remaining', {
                 count: remaining,
-                full: estimate("full"),
-                balanced: estimate("balanced"),
-                sprint: estimate("sprint"),
+                full: estimate('full'),
+                balanced: estimate('balanced'),
+                sprint: estimate('sprint'),
               })}
             </p>
           ) : null}
@@ -240,18 +233,22 @@ export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BookOpen className="size-5 text-primary" />
-            {t("reading.title")}
+            {t('reading.title')}
           </CardTitle>
-          <CardDescription>{t("reading.blurb")}</CardDescription>
+          <CardDescription>{t('reading.blurb')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {t("study.size")}
+              {t('study.size')}
             </p>
             <div className="flex flex-wrap gap-2">
               {READING_SIZES.map((value) => (
-                <Segment key={value} active={readingSize === value} onClick={() => setReadingSize(value)}>
+                <Segment
+                  key={value}
+                  active={readingSize === value}
+                  onClick={() => setReadingSize(value)}
+                >
                   {value}
                 </Segment>
               ))}
@@ -260,14 +257,14 @@ export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
           <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
             <Button onClick={startReading} disabled={!ready || starting || study.new === 0}>
               {starting ? <Loader2 className="size-4 animate-spin" /> : null}
-              {t("reading.start")}
+              {t('reading.start')}
             </Button>
             <p className="text-sm text-muted-foreground">
               {!ready
-                ? t("study.needNotes")
+                ? t('study.needNotes')
                 : study.new === 0
-                  ? t("reading.allRead")
-                  : t("reading.left", { count: study.new })}
+                  ? t('reading.allRead')
+                  : t('reading.left', { count: study.new })}
             </p>
           </div>
         </CardContent>
@@ -277,58 +274,66 @@ export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BookOpenCheck className="size-5 text-primary" />
-            {t("study.new.title")}
+            {t('study.new.title')}
           </CardTitle>
-          <CardDescription>{t("study.new.blurb")}</CardDescription>
+          <CardDescription>{t('study.new.blurb')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {t("study.pace")}
+              {t('study.pace')}
             </p>
             <div className="flex flex-wrap gap-2">
-              {(["full", "balanced", "sprint"] as const).map((value) => (
+              {(['full', 'balanced', 'sprint'] as const).map((value) => (
                 <Segment key={value} active={pace === value} onClick={() => changePace(value)}>
                   {t(PACE[value].label)}
                 </Segment>
               ))}
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              {t(PACE[pace].blurb)} {t("study.pace.perTopic", { minutes: MINUTES_PER_TOPIC[pace] })}
+              {t(PACE[pace].blurb)} {t('study.pace.perTopic', { minutes: MINUTES_PER_TOPIC[pace] })}
             </p>
           </div>
 
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {t("study.pick")}
+              {t('study.pick')}
             </p>
             <div className="flex flex-wrap gap-2">
-              {(["auto", "spread", "manual"] as const).map((value) => (
-                <Segment key={value} active={pick === value} onClick={() => setSettings({ ...settings, pick: value })}>
+              {(['auto', 'spread', 'manual'] as const).map((value) => (
+                <Segment
+                  key={value}
+                  active={pick === value}
+                  onClick={() => setSettings({ ...settings, pick: value })}
+                >
                   {t(PICK[value].label)}
                 </Segment>
               ))}
             </div>
           </div>
 
-          {pick !== "manual" ? (
+          {pick !== 'manual' ? (
             <div className="space-y-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {t("study.size")}
+                {t('study.size')}
               </p>
               <div className="flex flex-wrap gap-2">
                 {SESSION_SIZES[pace].map((value) => (
-                  <Segment key={value} active={size === value} onClick={() => setSettings({ ...settings, size: value })}>
+                  <Segment
+                    key={value}
+                    active={size === value}
+                    onClick={() => setSettings({ ...settings, size: value })}
+                  >
                     {value}
                   </Segment>
                 ))}
               </div>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                {pick === "spread"
-                  ? t("study.pick.spread.blurb")
-                  : pace === "sprint"
-                    ? t("study.pick.sprint.blurb")
-                    : t("study.pick.auto.blurb")}
+                {pick === 'spread'
+                  ? t('study.pick.spread.blurb')
+                  : pace === 'sprint'
+                    ? t('study.pick.sprint.blurb')
+                    : t('study.pick.auto.blurb')}
               </p>
             </div>
           ) : (
@@ -348,17 +353,17 @@ export function StudyTab({ detail, onSessionStart, onReadingStart }: Props) {
           <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
             <Button onClick={start} disabled={!canStart}>
               {starting ? <Loader2 className="size-4 animate-spin" /> : null}
-              {pick === "manual" && chosen.length > 0
-                ? t("study.start.count", { count: chosen.length })
-                : t("study.start")}
+              {pick === 'manual' && chosen.length > 0
+                ? t('study.start.count', { count: chosen.length })
+                : t('study.start')}
             </Button>
             {!ready ? (
-              <p className="text-sm text-muted-foreground">{t("study.needNotes")}</p>
-            ) : pick === "auto" && study.due_now + study.new === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("study.allDone")}</p>
-            ) : pick === "manual" && chosen.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('study.needNotes')}</p>
+            ) : pick === 'auto' && study.due_now + study.new === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('study.allDone')}</p>
+            ) : pick === 'manual' && chosen.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                {t("study.pickSome", { max: MAX_TOPICS[pace] })}
+                {t('study.pickSome', { max: MAX_TOPICS[pace] })}
               </p>
             ) : null}
           </div>
@@ -397,7 +402,7 @@ function TopicPicker({
       topics: section.topics.filter(
         (topic) =>
           withNotes.has(topic.id) &&
-          (needle === "" ||
+          (needle === '' ||
             topic.title.toLowerCase().includes(needle) ||
             topic.id.toLowerCase().includes(needle)),
       ),
@@ -410,17 +415,17 @@ function TopicPicker({
         <Input
           value={query}
           onChange={(event) => onQuery(event.target.value)}
-          placeholder={t("study.search")}
+          placeholder={t('study.search')}
           className="max-w-xs"
         />
         <p className="text-xs text-muted-foreground">
-          {t("study.chosen", { count: chosen.length, max: maxTopics })}
+          {t('study.chosen', { count: chosen.length, max: maxTopics })}
         </p>
       </div>
 
       <ScrollArea className="h-80 rounded-4xl border border-border">
         {sections.length === 0 ? (
-          <p className="p-4 text-sm text-muted-foreground">{t("study.nothingFound")}</p>
+          <p className="p-4 text-sm text-muted-foreground">{t('study.nothingFound')}</p>
         ) : (
           sections.map((section) => (
             <div key={section.title}>
@@ -434,8 +439,8 @@ function TopicPicker({
                   <label
                     key={topic.id}
                     className={cn(
-                      "flex cursor-pointer items-start gap-3 px-4 py-2.5 transition-colors hover:bg-muted/50",
-                      !checked && atCap && "cursor-not-allowed opacity-50",
+                      'flex cursor-pointer items-start gap-3 px-4 py-2.5 transition-colors hover:bg-muted/50',
+                      !checked && atCap && 'cursor-not-allowed opacity-50',
                     )}
                   >
                     <Checkbox
@@ -449,7 +454,7 @@ function TopicPicker({
                         <Badge variant="outline" className="font-mono text-[0.65rem]">
                           {topic.id}
                         </Badge>
-                        <span className={cn("text-[0.7rem]", STAGES[stage].className)}>
+                        <span className={cn('text-[0.7rem]', STAGES[stage].className)}>
                           {t(STAGES[stage].label)}
                         </span>
                       </span>
@@ -481,10 +486,10 @@ function Segment({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "rounded-4xl border px-4 py-1.5 text-sm transition-colors",
+        'rounded-4xl border px-4 py-1.5 text-sm transition-colors',
         active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-input bg-input/30 hover:bg-muted",
+          ? 'border-primary bg-primary text-primary-foreground'
+          : 'border-input bg-input/30 hover:bg-muted',
       )}
     >
       {children}
@@ -495,7 +500,7 @@ function Segment({
 function Tally({ label, value, tone }: { label: string; value: number; tone?: string }) {
   return (
     <div className="rounded-4xl border border-border px-4 py-3">
-      <p className={cn("text-xl font-semibold tabular-nums", tone)}>{value}</p>
+      <p className={cn('text-xl font-semibold tabular-nums', tone)}>{value}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );

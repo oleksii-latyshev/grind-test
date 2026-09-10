@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { invoke } from '@tauri-apps/api/core';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 
 import type {
   Attempt,
@@ -7,10 +7,10 @@ import type {
   GenerationEvent,
   Hint,
   KnowledgeBatchReport,
+  KnowledgeNote,
   ModelChoice,
   ModelInfo,
   ModelSettings,
-  KnowledgeNote,
   Quiz,
   QuizRequest,
   QuizSummary,
@@ -23,35 +23,35 @@ import type {
   SubjectOverview,
   Topic,
   VaultInfo,
-} from "./types";
+} from './types';
 
-const GENERATION_EVENT = "generation://progress";
+const GENERATION_EVENT = 'generation://progress';
 
 export const api = {
-  vaultInfo: () => invoke<VaultInfo>("vault_info"),
+  vaultInfo: () => invoke<VaultInfo>('vault_info'),
 
   /** Opens the system folder picker; resolves with the vault state afterwards. */
-  chooseVault: () => invoke<VaultInfo>("choose_vault"),
+  chooseVault: () => invoke<VaultInfo>('choose_vault'),
 
   /** Picks a parent folder and creates a vault skeleton inside it. */
-  createVault: () => invoke<VaultInfo>("create_vault"),
+  createVault: () => invoke<VaultInfo>('create_vault'),
 
   /** Accepts the folder the app already resolved, without opening a picker. */
-  useDefaultVault: () => invoke<VaultInfo>("use_default_vault"),
+  useDefaultVault: () => invoke<VaultInfo>('use_default_vault'),
 
-  getModels: () => invoke<ModelChoice>("get_models"),
+  getModels: () => invoke<ModelChoice>('get_models'),
 
-  setModels: (models: ModelSettings) => invoke<ModelChoice>("set_models", { models }),
+  setModels: (models: ModelSettings) => invoke<ModelChoice>('set_models', { models }),
 
   /** Asks the CLI what it can run; fails when `agy` is missing. */
-  listModels: () => invoke<ModelInfo[]>("list_models"),
+  listModels: () => invoke<ModelInfo[]>('list_models'),
 
-  listSubjects: () => invoke<SubjectOverview[]>("list_subjects"),
+  listSubjects: () => invoke<SubjectOverview[]>('list_subjects'),
 
-  getSubject: (subjectId: string) => invoke<SubjectDetail>("get_subject", { subjectId }),
+  getSubject: (subjectId: string) => invoke<SubjectDetail>('get_subject', { subjectId }),
 
   getKnowledge: (subjectId: string, topicId: string) =>
-    invoke<KnowledgeNote | null>("get_knowledge", { subjectId, topicId }),
+    invoke<KnowledgeNote | null>('get_knowledge', { subjectId, topicId }),
 
   /** Long-running: subscribe with `onGenerationProgress` before awaiting this. */
   generateKnowledge: (options: {
@@ -60,18 +60,18 @@ export const api = {
     force?: boolean;
     concurrency?: number;
   }) =>
-    invoke<KnowledgeBatchReport>("generate_knowledge", {
+    invoke<KnowledgeBatchReport>('generate_knowledge', {
       subjectId: options.subjectId,
       topicIds: options.topicIds ?? null,
       force: options.force ?? false,
       concurrency: options.concurrency ?? 4,
     }),
 
-  generateQuiz: (request: QuizRequest) => invoke<Quiz>("generate_quiz", { request }),
+  generateQuiz: (request: QuizRequest) => invoke<Quiz>('generate_quiz', { request }),
 
-  listQuizzes: (subjectId: string) => invoke<QuizSummary[]>("list_quizzes", { subjectId }),
+  listQuizzes: (subjectId: string) => invoke<QuizSummary[]>('list_quizzes', { subjectId }),
 
-  getQuiz: (subjectId: string, quizId: string) => invoke<Quiz>("get_quiz", { subjectId, quizId }),
+  getQuiz: (subjectId: string, quizId: string) => invoke<Quiz>('get_quiz', { subjectId, quizId }),
 
   submitQuiz: (options: {
     subjectId: string;
@@ -79,7 +79,7 @@ export const api = {
     selections: Record<string, number[]>;
     hintsUsed: string[];
   }) =>
-    invoke<AttemptResult>("submit_quiz", {
+    invoke<AttemptResult>('submit_quiz', {
       subjectId: options.subjectId,
       quizId: options.quizId,
       selections: options.selections,
@@ -87,10 +87,10 @@ export const api = {
     }),
 
   getHint: (subjectId: string, quizId: string, questionId: string) =>
-    invoke<Hint>("get_hint", { subjectId, quizId, questionId }),
+    invoke<Hint>('get_hint', { subjectId, quizId, questionId }),
 
   listAttempts: (subjectId?: string) =>
-    invoke<Attempt[]>("list_attempts", { subjectId: subjectId ?? null }),
+    invoke<Attempt[]>('list_attempts', { subjectId: subjectId ?? null }),
 
   /**
    * Picks the topics and loads their notes. Disk only — returns immediately, so the reader
@@ -105,11 +105,11 @@ export const api = {
     selection?: Selection;
     topicIds?: string[];
   }) =>
-    invoke<SessionPlan>("plan_study_session", {
+    invoke<SessionPlan>('plan_study_session', {
       subjectId: options.subjectId,
       size: options.size,
       mode: options.mode,
-      selection: options.selection ?? "scheduled",
+      selection: options.selection ?? 'scheduled',
       topicIds: options.topicIds ?? null,
     }),
 
@@ -118,13 +118,13 @@ export const api = {
    * resumed session can call it again without paying twice.
    */
   prepareSessionQuestions: (subjectId: string, sessionId: string) =>
-    invoke<SessionPlan>("prepare_session_questions", { subjectId, sessionId }),
+    invoke<SessionPlan>('prepare_session_questions', { subjectId, sessionId }),
 
   unfinishedSessions: (subjectId: string) =>
-    invoke<SessionSummary[]>("unfinished_sessions", { subjectId }),
+    invoke<SessionSummary[]>('unfinished_sessions', { subjectId }),
 
   resumeStudySession: (subjectId: string, sessionId: string) =>
-    invoke<SessionPlan>("resume_study_session", { subjectId, sessionId }),
+    invoke<SessionPlan>('resume_study_session', { subjectId, sessionId }),
 
   finishStudySession: (options: {
     subjectId: string;
@@ -132,18 +132,18 @@ export const api = {
     openAnswers: Record<string, string>;
     quizSelections: Record<string, number[]>;
   }) =>
-    invoke<SessionResult>("finish_study_session", {
+    invoke<SessionResult>('finish_study_session', {
       subjectId: options.subjectId,
       sessionId: options.sessionId,
       openAnswers: options.openAnswers,
       quizSelections: options.quizSelections,
     }),
 
-  markTopicRead: (topicId: string) => invoke<void>("mark_topic_read", { topicId }),
+  markTopicRead: (topicId: string) => invoke<void>('mark_topic_read', { topicId }),
 
   /** Notes-only reading: unseen topics spread across the syllabus. Empty once all are read. */
   planReading: (subjectId: string, size: number) =>
-    invoke<Topic[]>("plan_reading", { subjectId, size }),
+    invoke<Topic[]>('plan_reading', { subjectId, size }),
 };
 
 export function onGenerationProgress(
@@ -154,7 +154,7 @@ export function onGenerationProgress(
 
 /** Tauri rejects with a plain string; everything else may not be an Error. */
 export function errorMessage(error: unknown): string {
-  if (typeof error === "string") return error;
+  if (typeof error === 'string') return error;
   if (error instanceof Error) return error.message;
   return String(error);
 }

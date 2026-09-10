@@ -1,16 +1,15 @@
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, Lightbulb, Loader2, X } from "lucide-react";
-import { toast } from "sonner";
-
-import { useT } from "@/i18n";
-import type { MessageId } from "@/i18n";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { api, errorMessage } from "@/lib/api";
-import type { AttemptResult, Hint, Quiz } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight, Lightbulb, Loader2, X } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import type { MessageId } from '@/i18n';
+import { useT } from '@/i18n';
+import { api, errorMessage } from '@/lib/api';
+import type { AttemptResult, Hint, Quiz } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 interface Props {
   quiz: Quiz;
@@ -34,7 +33,7 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
   function choose(option: number) {
     setSelections((current) => {
       const previous = current[question.id] ?? [];
-      if (question.type === "single") {
+      if (question.type === 'single') {
         return { ...current, [question.id]: [option] };
       }
       const next = previous.includes(option)
@@ -79,7 +78,7 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
       <header className="space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {t("quiz.position", {
+            {t('quiz.position', {
               index: index + 1,
               total: quiz.questions.length,
               answered,
@@ -87,7 +86,7 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
           </p>
           <Button variant="ghost" size="sm" onClick={onExit}>
             <X className="size-4" />
-            {t("common.exit")}
+            {t('common.exit')}
           </Button>
         </div>
         <Progress value={((index + 1) / quiz.questions.length) * 100} />
@@ -100,8 +99,8 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
               {question.topic_id}
             </Badge>
             <Badge variant="secondary">{t(DIFFICULTY_LABELS[question.difficulty])}</Badge>
-            {question.type === "multi" ? (
-              <Badge variant="secondary">{t("session.multi")}</Badge>
+            {question.type === 'multi' ? (
+              <Badge variant="secondary">{t('session.multi')}</Badge>
             ) : null}
           </div>
 
@@ -111,25 +110,24 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
             {question.options.map((option, optionIndex) => {
               const active = chosen.includes(optionIndex);
               return (
+                // biome-ignore lint/suspicious/noArrayIndexKey: options are addressed by position.
                 <li key={optionIndex}>
                   <button
                     type="button"
                     onClick={() => choose(optionIndex)}
                     aria-pressed={active}
                     className={cn(
-                      "flex w-full items-start gap-3 rounded-4xl border px-4 py-3 text-left text-sm transition-colors",
-                      active
-                        ? "border-primary bg-primary/10"
-                        : "border-input hover:bg-muted/60",
+                      'flex w-full items-start gap-3 rounded-4xl border px-4 py-3 text-left text-sm transition-colors',
+                      active ? 'border-primary bg-primary/10' : 'border-input hover:bg-muted/60',
                     )}
                   >
                     <span
                       className={cn(
-                        "mt-px flex size-5 shrink-0 items-center justify-center border text-[0.7rem] font-medium",
-                        question.type === "multi" ? "rounded-md" : "rounded-full",
+                        'mt-px flex size-5 shrink-0 items-center justify-center border text-[0.7rem] font-medium',
+                        question.type === 'multi' ? 'rounded-md' : 'rounded-full',
                         active
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-input text-muted-foreground",
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-input text-muted-foreground',
                       )}
                     >
                       {optionIndex + 1}
@@ -145,7 +143,7 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
             <div className="space-y-2 rounded-4xl border border-border bg-muted/50 p-4">
               <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <Lightbulb className="size-3.5" />
-                {t("quiz.hint")}
+                {t('quiz.hint')}
               </p>
               <p className="text-sm leading-relaxed">{hint.hint}</p>
               {hint.related_concepts.length > 0 ? (
@@ -165,7 +163,7 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
               ) : (
                 <Lightbulb className="size-4" />
               )}
-              {t("quiz.hint")}
+              {t('quiz.hint')}
             </Button>
           )}
         </CardContent>
@@ -178,17 +176,17 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
           disabled={index === 0}
         >
           <ChevronLeft className="size-4" />
-          {t("common.back")}
+          {t('common.back')}
         </Button>
 
         {isLast ? (
           <Button onClick={submit} disabled={submitting}>
             {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
-            {t("quiz.finish")}
+            {t('quiz.finish')}
           </Button>
         ) : (
           <Button onClick={() => setIndex((value) => value + 1)}>
-            {t("common.next")}
+            {t('common.next')}
             <ChevronRight className="size-4" />
           </Button>
         )}
@@ -197,9 +195,9 @@ export function QuizScreen({ quiz, onExit, onFinish }: Props) {
   );
 }
 
-const DIFFICULTY_LABELS: Record<Quiz["difficulty"], MessageId> = {
-  easy: "difficulty.easy",
-  medium: "difficulty.medium",
-  hard: "difficulty.hard",
-  mixed: "difficulty.mixed",
+const DIFFICULTY_LABELS: Record<Quiz['difficulty'], MessageId> = {
+  easy: 'difficulty.easy',
+  medium: 'difficulty.medium',
+  hard: 'difficulty.hard',
+  mixed: 'difficulty.mixed',
 };

@@ -1,7 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState } from 'react';
 
-import { MAX_TOPICS, SESSION_SIZES } from "./study";
-import type { SessionMode } from "./types";
+import { MAX_TOPICS, SESSION_SIZES } from './study';
+import type { SessionMode } from './types';
 
 /**
  * A value remembered per machine, in `localStorage`.
@@ -43,7 +43,7 @@ export function usePreference<T>(
 }
 
 /** How topics are chosen, as the study tab offers it. */
-export type TopicPick = "auto" | "spread" | "manual";
+export type TopicPick = 'auto' | 'spread' | 'manual';
 
 /**
  * The three choices at the top of a new session. Kept together under one key so
@@ -58,21 +58,21 @@ export interface SessionSettings {
   size: number;
 }
 
-const KEY = "grind:session-settings";
+const KEY = 'grind:session-settings';
 
 export const DEFAULT_SESSION_SETTINGS: SessionSettings = {
-  pace: "sprint",
-  pick: "auto",
+  pace: 'sprint',
+  pick: 'auto',
   size: SESSION_SIZES.sprint[1],
 };
 
 export function isSessionSettings(value: unknown): value is SessionSettings {
-  if (!value || typeof value !== "object") return false;
+  if (!value || typeof value !== 'object') return false;
   const { pace, pick, size } = value as Partial<SessionSettings>;
   return (
-    (pace === "full" || pace === "balanced" || pace === "sprint") &&
-    (pick === "auto" || pick === "spread" || pick === "manual") &&
-    typeof size === "number" &&
+    (pace === 'full' || pace === 'balanced' || pace === 'sprint') &&
+    (pick === 'auto' || pick === 'spread' || pick === 'manual') &&
+    typeof size === 'number' &&
     Number.isInteger(size) &&
     size >= 1 &&
     // The size steps differ per pace, so a stored pair can only be trusted together.

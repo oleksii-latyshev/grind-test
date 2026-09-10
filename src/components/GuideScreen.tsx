@@ -8,14 +8,13 @@ import {
   PenLine,
   SkipForward,
   Timer,
-} from "lucide-react";
-
-import { useT } from "@/i18n";
-import type { MessageId, Translate } from "@/i18n";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { MINUTES_PER_TOPIC } from "@/lib/study";
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import type { MessageId, Translate } from '@/i18n';
+import { useT } from '@/i18n';
+import { MINUTES_PER_TOPIC } from '@/lib/study';
 
 /**
  * What the app does, in the order the student meets it.
@@ -39,69 +38,69 @@ export function GuideScreen({
         <div className="flex items-center justify-between">
           {firstRun ? (
             <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t("guide.firstRun")}
+              {t('guide.firstRun')}
             </span>
           ) : (
             <Button variant="ghost" size="sm" onClick={onDone} className="-ml-2">
               <ArrowLeft className="size-4" />
-              {t("common.back")}
+              {t('common.back')}
             </Button>
           )}
           {/* Reachable without scrolling: someone who already knows what a
               spaced-repetition study app is should not have to read to the bottom. */}
           {firstRun ? (
             <Button variant="ghost" size="sm" onClick={onDone}>
-              {t("common.skip")}
+              {t('common.skip')}
               <SkipForward className="size-4" />
             </Button>
           ) : null}
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("guide.title")}</h1>
-        <p className="text-sm leading-relaxed text-muted-foreground">{t("guide.blurb")}</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('guide.title')}</h1>
+        <p className="text-sm leading-relaxed text-muted-foreground">{t('guide.blurb')}</p>
       </header>
 
       <section className="space-y-3">
         <Step
           number={1}
           icon={<FileText className="size-5 text-primary" />}
-          title={t("guide.step1.title")}
-          body={t("guide.step1.body")}
+          title={t('guide.step1.title')}
+          body={t('guide.step1.body')}
         />
         <Step
           number={2}
           icon={<BrainCircuit className="size-5 text-primary" />}
-          title={t("guide.step2.title")}
-          body={t("guide.step2.body")}
+          title={t('guide.step2.title')}
+          body={t('guide.step2.body')}
         />
         <Step
           number={3}
           icon={<BookOpenCheck className="size-5 text-primary" />}
-          title={t("guide.step3.title")}
-          body={t("guide.step3.body")}
+          title={t('guide.step3.title')}
+          body={t('guide.step3.body')}
         />
         <Step
           number={4}
           icon={<CalendarClock className="size-5 text-primary" />}
-          title={t("guide.step4.title")}
-          body={t("guide.step4.body")}
+          title={t('guide.step4.title')}
+          body={t('guide.step4.body')}
         />
       </section>
 
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
           <PenLine className="size-4 text-muted-foreground" />
-          {t("guide.pace")}
+          {t('guide.pace')}
         </h2>
         <Card>
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="px-4 py-2.5 font-medium">{t("guide.pace.col.pace")}</th>
-                  <th className="px-4 py-2.5 font-medium">{t("guide.pace.col.reading")}</th>
-                  <th className="px-4 py-2.5 font-medium">{t("guide.pace.col.answer")}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('guide.pace.col.pace')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('guide.pace.col.reading')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('guide.pace.col.answer')}</th>
                   <th className="px-4 py-2.5 text-right font-medium">
-                    {t("guide.pace.col.minutes")}
+                    {t('guide.pace.col.minutes')}
                   </th>
                 </tr>
               </thead>
@@ -131,25 +130,25 @@ export function GuideScreen({
             </table>
           </CardContent>
         </Card>
-        <p className="text-xs leading-relaxed text-muted-foreground">{t("guide.pace.note")}</p>
+        <p className="text-xs leading-relaxed text-muted-foreground">{t('guide.pace.note')}</p>
       </section>
 
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
           <ListChecks className="size-4 text-muted-foreground" />
-          {t("guide.selection")}
+          {t('guide.selection')}
         </h2>
         <div className="grid gap-3 sm:grid-cols-3">
-          <Tile title={t("study.pick.auto")} body={t("study.pick.auto.blurb")} />
-          <Tile title={t("study.pick.spread")} body={t("study.pick.spread.blurb")} />
-          <Tile title={t("study.pick.manual")} body={t("guide.selection.manual")} />
+          <Tile title={t('study.pick.auto')} body={t('study.pick.auto.blurb')} />
+          <Tile title={t('study.pick.spread')} body={t('study.pick.spread.blurb')} />
+          <Tile title={t('study.pick.manual')} body={t('guide.selection.manual')} />
         </div>
       </section>
 
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
           <CalendarClock className="size-4 text-muted-foreground" />
-          {t("guide.ladder")}
+          {t('guide.ladder')}
         </h2>
         <Card>
           <CardContent className="space-y-3 py-5 text-sm leading-relaxed">
@@ -158,12 +157,12 @@ export function GuideScreen({
                 <span key={days} className="flex items-center gap-2">
                   {index > 0 ? <span className="text-border">→</span> : null}
                   <Badge variant="outline" className="tabular-nums">
-                    {t("guide.ladder.days", { days })}
+                    {t('guide.ladder.days', { days })}
                   </Badge>
                 </span>
               ))}
             </div>
-            <p className="text-muted-foreground">{t("guide.ladder.body")}</p>
+            <p className="text-muted-foreground">{t('guide.ladder.body')}</p>
           </CardContent>
         </Card>
       </section>
@@ -171,18 +170,18 @@ export function GuideScreen({
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
           <Timer className="size-4 text-muted-foreground" />
-          {t("guide.details")}
+          {t('guide.details')}
         </h2>
         <ul className="space-y-2 text-sm leading-relaxed text-muted-foreground">
-          <li>{t("guide.details.resume")}</li>
-          <li>{t("guide.details.timer")}</li>
-          <li>{t("guide.details.models")}</li>
-          <li>{t("guide.details.files")}</li>
+          <li>{t('guide.details.resume')}</li>
+          <li>{t('guide.details.timer')}</li>
+          <li>{t('guide.details.models')}</li>
+          <li>{t('guide.details.files')}</li>
         </ul>
       </section>
 
       <div className="flex justify-end border-t border-border pt-6">
-        <Button onClick={onDone}>{firstRun ? t("guide.start") : t("common.close")}</Button>
+        <Button onClick={onDone}>{firstRun ? t('guide.start') : t('common.close')}</Button>
       </div>
     </div>
   );

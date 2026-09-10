@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, ChevronLeft, FileWarning, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-
-import { useT } from "@/i18n";
-import { NoteReader } from "@/components/NoteReader";
-import { ReadingSizeControl } from "@/components/ReadingSizeControl";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { api, errorMessage } from "@/lib/api";
-import type { KnowledgeNote, Topic } from "@/lib/types";
+import { ArrowLeft, ArrowRight, Check, ChevronLeft, FileWarning, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { NoteReader } from '@/components/NoteReader';
+import { ReadingSizeControl } from '@/components/ReadingSizeControl';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useT } from '@/i18n';
+import { api, errorMessage } from '@/lib/api';
+import type { KnowledgeNote, Topic } from '@/lib/types';
 
 interface Props {
   topics: Topic[];
@@ -78,7 +77,7 @@ export function ReaderScreen({ topics: initial, onBack, onMore }: Props) {
       const next = await onMore();
       if (next.length === 0) {
         setMarked(true);
-        toast.info(t("reading.allRead"));
+        toast.info(t('reading.allRead'));
         return;
       }
       setTopics(next);
@@ -97,7 +96,7 @@ export function ReaderScreen({ topics: initial, onBack, onMore }: Props) {
       <div className="sticky top-12 z-10 -mx-8 flex items-center justify-between border-b border-border bg-background/95 px-8 py-2 backdrop-blur">
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
           <ArrowLeft className="size-4" />
-          {t("common.back")}
+          {t('common.back')}
         </Button>
         <ReadingSizeControl />
       </div>
@@ -105,7 +104,7 @@ export function ReaderScreen({ topics: initial, onBack, onMore }: Props) {
       {loading ? (
         <div className="flex items-center gap-2 py-16 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" />
-          {t("reader.loading")}
+          {t('reader.loading')}
         </div>
       ) : note ? (
         <>
@@ -118,7 +117,7 @@ export function ReaderScreen({ topics: initial, onBack, onMore }: Props) {
                 </Badge>
                 {topics.length > 1 ? (
                   <span className="text-xs text-muted-foreground">
-                    {t("session.topicOf", { index: index + 1, total: topics.length })}
+                    {t('session.topicOf', { index: index + 1, total: topics.length })}
                   </span>
                 ) : null}
               </>
@@ -133,28 +132,28 @@ export function ReaderScreen({ topics: initial, onBack, onMore }: Props) {
                 className="mr-auto"
               >
                 <ChevronLeft className="size-4" />
-                {t("session.prev")}
+                {t('session.prev')}
               </Button>
             ) : null}
             {!isLast ? (
               <Button onClick={nextTopic}>
-                {t("session.nextTopic")}
+                {t('session.nextTopic')}
                 <ArrowRight className="size-4" />
               </Button>
             ) : (
               <>
                 <Button
-                  variant={marked || onMore ? "outline" : "default"}
+                  variant={marked || onMore ? 'outline' : 'default'}
                   onClick={markRead}
                   disabled={marked}
                 >
                   <Check className="size-4" />
-                  {marked ? t("reader.marked") : t("reader.markRead")}
+                  {marked ? t('reader.marked') : t('reader.markRead')}
                 </Button>
                 {onMore ? (
                   <Button onClick={more} disabled={fetching}>
                     {fetching ? <Loader2 className="size-4 animate-spin" /> : null}
-                    {t("reading.more")}
+                    {t('reading.more')}
                     <ArrowRight className="size-4" />
                   </Button>
                 ) : null}
@@ -165,7 +164,7 @@ export function ReaderScreen({ topics: initial, onBack, onMore }: Props) {
       ) : (
         <div className="flex flex-col items-center gap-2 py-16 text-center text-sm text-muted-foreground">
           <FileWarning className="size-6" />
-          <p>{t("reader.missing")}</p>
+          <p>{t('reader.missing')}</p>
         </div>
       )}
     </div>

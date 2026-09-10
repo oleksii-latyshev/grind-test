@@ -22,10 +22,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "term",
-          "definition"
-        ]
+        "required": ["term", "definition"]
       }
     },
     "exam_traps": {
@@ -35,11 +32,5 @@
       }
     }
   },
-  "required": [
-    "summary",
-    "exam_answer",
-    "markdown",
-    "key_terms",
-    "exam_traps"
-  ]
+  "required": ["summary", "exam_answer", "markdown", "key_terms", "exam_traps"]
 }

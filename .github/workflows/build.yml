@@ -35,6 +35,8 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun test
       # `bun run build` is `tsc && vite build`, so this is the type check too. It needs no
       # Rust toolchain, which makes it the fastest signal on a broken commit.
       - run: bun run build

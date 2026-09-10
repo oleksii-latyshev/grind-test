@@ -2,17 +2,17 @@
  * Written answers are kept locally while a session is in progress, so a crash, an
  * accidental exit or a quit does not throw away several paragraphs of typing.
  */
-const PREFIX = "grind:session-draft:";
+const PREFIX = 'grind:session-draft:';
 
 export function readDraft(sessionId: string): Record<string, string> {
   try {
     const raw = window.localStorage.getItem(PREFIX + sessionId);
     if (!raw) return {};
     const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
     return Object.fromEntries(
       Object.entries(parsed as Record<string, unknown>).filter(
-        ([, value]) => typeof value === "string",
+        ([, value]) => typeof value === 'string',
       ),
     ) as Record<string, string>;
   } catch {

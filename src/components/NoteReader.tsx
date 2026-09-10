@@ -1,18 +1,12 @@
-import { Markdown } from "@/components/Markdown";
-import { Badge } from "@/components/ui/badge";
-import type { KnowledgeNote } from "@/lib/types";
+import { Markdown } from '@/components/Markdown';
+import { Badge } from '@/components/ui/badge';
+import type { KnowledgeNote } from '@/lib/types';
 
 /**
  * The reading surface for a knowledge note: a single comfortable column rather than a
  * modal, because these notes run to a thousand words.
  */
-export function NoteReader({
-  note,
-  eyebrow,
-}: {
-  note: KnowledgeNote;
-  eyebrow?: React.ReactNode;
-}) {
+export function NoteReader({ note, eyebrow }: { note: KnowledgeNote; eyebrow?: React.ReactNode }) {
   return (
     <article className="mx-auto w-full max-w-3xl space-y-6">
       <header className="space-y-3 border-b border-border pb-6">

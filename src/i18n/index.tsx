@@ -1,20 +1,19 @@
-import { useEffect } from "react";
-import { IntlProvider, useIntl } from "react-intl";
-import type { IntlShape } from "react-intl";
+import { useEffect } from 'react';
+import type { IntlShape } from 'react-intl';
+import { IntlProvider, useIntl } from 'react-intl';
 
-import { usePreference } from "@/lib/prefs";
+import { usePreference } from '@/lib/prefs';
+import type { MessageId } from './messages/en';
+import { en } from './messages/en';
+import { ru } from './messages/ru';
+import { uk } from './messages/uk';
 
-import { en } from "./messages/en";
-import type { MessageId } from "./messages/en";
-import { ru } from "./messages/ru";
-import { uk } from "./messages/uk";
-
-export type Locale = "uk" | "ru" | "en";
+export type Locale = 'uk' | 'ru' | 'en';
 
 export const LOCALES: { value: Locale; label: string }[] = [
-  { value: "uk", label: "Українська" },
-  { value: "ru", label: "Русский" },
-  { value: "en", label: "English" },
+  { value: 'uk', label: 'Українська' },
+  { value: 'ru', label: 'Русский' },
+  { value: 'en', label: 'English' },
 ];
 
 const CATALOGUES: Record<Locale, Record<MessageId, string>> = { uk, ru, en };
@@ -30,9 +29,9 @@ const CATALOGUES: Record<Locale, Record<MessageId, string>> = { uk, ru, en };
  */
 export function useLocale() {
   return usePreference<Locale>(
-    "grind:locale",
-    "uk",
-    (value): value is Locale => value === "uk" || value === "ru" || value === "en",
+    'grind:locale',
+    'uk',
+    (value): value is Locale => value === 'uk' || value === 'ru' || value === 'en',
   );
 }
 

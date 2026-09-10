@@ -1,9 +1,8 @@
-import { Languages } from "lucide-react";
-
-import { LOCALES, useT } from "@/i18n";
-import type { Locale } from "@/i18n";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Languages } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import type { Locale } from '@/i18n';
+import { LOCALES, useT } from '@/i18n';
+import { cn } from '@/lib/utils';
 
 /**
  * Interface language. Three options is few enough to cycle through rather than open a menu
@@ -26,10 +25,10 @@ export function LanguageSwitcher({
       size="sm"
       className="gap-1.5 px-2"
       onClick={() => onChange(next.value)}
-      title={`${t("app.language")}: ${next.label}`}
+      title={`${t('app.language')}: ${next.label}`}
     >
       <Languages className="size-4" />
-      <span className={cn("text-xs uppercase", "tracking-wide")}>{locale}</span>
+      <span className={cn('text-xs uppercase', 'tracking-wide')}>{locale}</span>
     </Button>
   );
 }

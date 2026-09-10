@@ -1,12 +1,11 @@
-import { Check, RotateCcw, X } from "lucide-react";
-
-import { useT } from "@/i18n";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import type { AttemptResult, Quiz } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { Check, RotateCcw, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { useT } from '@/i18n';
+import type { AttemptResult, Quiz } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 interface Props {
   quiz: Quiz;
@@ -22,38 +21,36 @@ export function ResultsScreen({ quiz, result, onBackToSubject }: Props) {
     <div className="mx-auto w-full max-w-3xl space-y-6 p-8">
       <Card>
         <CardContent className="space-y-4 py-6 text-center">
-          <p className="text-sm text-muted-foreground">{t("results.title")}</p>
+          <p className="text-sm text-muted-foreground">{t('results.title')}</p>
           <p className="text-5xl font-semibold tabular-nums">{result.score_percent}%</p>
           <p className="text-sm text-muted-foreground">
-            {t("results.correctOf", { correct: result.correct, total: result.total })}
+            {t('results.correctOf', { correct: result.correct, total: result.total })}
           </p>
           <Progress value={result.score_percent} />
           <div className="flex justify-center gap-2 pt-2">
             <Button onClick={onBackToSubject}>
               <RotateCcw className="size-4" />
-              {t("session.toSubject")}
+              {t('session.toSubject')}
             </Button>
           </div>
         </CardContent>
       </Card>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold tracking-tight">{t("results.review")}</h2>
+        <h2 className="text-sm font-semibold tracking-tight">{t('results.review')}</h2>
         {quiz.questions.map((question, index) => {
           const answer = byQuestion.get(question.id);
           const selected = answer?.selected ?? [];
           const correct = answer?.correct ?? false;
 
           return (
-            <Card key={question.id} className={cn(!correct && "border-destructive/40")}>
+            <Card key={question.id} className={cn(!correct && 'border-destructive/40')}>
               <CardContent className="space-y-4 py-5">
                 <div className="flex items-start gap-3">
                   <span
                     className={cn(
-                      "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full",
-                      correct
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-destructive text-white",
+                      'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full',
+                      correct ? 'bg-primary text-primary-foreground' : 'bg-destructive text-white',
                     )}
                   >
                     {correct ? <Check className="size-3.5" /> : <X className="size-3.5" />}
@@ -74,16 +71,19 @@ export function ResultsScreen({ quiz, result, onBackToSubject }: Props) {
                     const isChosen = selected.includes(optionIndex);
                     return (
                       <li
+                        // biome-ignore lint/suspicious/noArrayIndexKey: options are addressed by position.
                         key={optionIndex}
                         className={cn(
-                          "rounded-2xl px-3 py-1.5 text-sm",
-                          isCorrect && "bg-primary/10 font-medium",
-                          isChosen && !isCorrect && "bg-destructive/10 line-through",
+                          'rounded-2xl px-3 py-1.5 text-sm',
+                          isCorrect && 'bg-primary/10 font-medium',
+                          isChosen && !isCorrect && 'bg-destructive/10 line-through',
                         )}
                       >
                         {option}
                         {isChosen ? (
-                          <span className="ml-2 text-xs text-muted-foreground">{t("results.yourChoice")}</span>
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {t('results.yourChoice')}
+                          </span>
                         ) : null}
                       </li>
                     );

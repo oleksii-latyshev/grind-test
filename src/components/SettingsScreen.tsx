@@ -1,33 +1,32 @@
-import { useEffect, useState } from "react";
-import { ArrowLeft, BrainCircuit, Loader2, RotateCcw, Save, Zap } from "lucide-react";
-import { toast } from "sonner";
-
-import { useT } from "@/i18n";
-import type { MessageId } from "@/i18n";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { ArrowLeft, BrainCircuit, Loader2, RotateCcw, Save, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { api, errorMessage } from "@/lib/api";
-import type { ModelInfo, ModelSettings } from "@/lib/types";
+} from '@/components/ui/select';
+import type { MessageId } from '@/i18n';
+import { useT } from '@/i18n';
+import { api, errorMessage } from '@/lib/api';
+import type { ModelInfo, ModelSettings } from '@/lib/types';
 
 type Tier = keyof ModelSettings;
 
 const TIERS: Record<Tier, { title: MessageId; blurb: MessageId; icon: React.ReactNode }> = {
   smart: {
-    title: "settings.smart",
-    blurb: "settings.smart.blurb",
+    title: 'settings.smart',
+    blurb: 'settings.smart.blurb',
     icon: <BrainCircuit className="size-5 text-primary" />,
   },
   fast: {
-    title: "settings.fast",
-    blurb: "settings.fast.blurb",
+    title: 'settings.fast',
+    blurb: 'settings.fast.blurb',
     icon: <Zap className="size-5 text-chart-3" />,
   },
 };
@@ -70,7 +69,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
     try {
       const choice = await api.setModels(chosen);
       setChosen(choice.models);
-      toast.success(t("settings.saved"));
+      toast.success(t('settings.saved'));
     } catch (error) {
       toast.error(errorMessage(error));
     } finally {
@@ -82,7 +81,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
     return (
       <div className="flex items-center justify-center gap-2 p-16 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" />
-        {t("app.loading")}
+        {t('app.loading')}
       </div>
     );
   }
@@ -94,28 +93,26 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
       <div className="space-y-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
           <ArrowLeft className="size-4" />
-          {t("common.back")}
+          {t('common.back')}
         </Button>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("settings.title")}</h1>
-        <p className="text-sm leading-relaxed text-muted-foreground">{t("settings.blurb")}</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('settings.title')}</h1>
+        <p className="text-sm leading-relaxed text-muted-foreground">{t('settings.blurb')}</p>
       </div>
 
-      {(["smart", "fast"] as const).map((tier) => (
+      {(['smart', 'fast'] as const).map((tier) => (
         <Card key={tier}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {TIERS[tier].icon}
               {t(TIERS[tier].title)}
             </CardTitle>
-            <CardDescription className="leading-relaxed">
-              {t(TIERS[tier].blurb)}
-            </CardDescription>
+            <CardDescription className="leading-relaxed">{t(TIERS[tier].blurb)}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {available === null ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" />
-                {t("settings.asking")}
+                {t('settings.asking')}
               </div>
             ) : available.length > 0 ? (
               <Select
@@ -123,7 +120,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
                 // base-ui hands back `null` when a selection is cleared; the tier always
                 // needs an id, so that is simply ignored.
                 onValueChange={(value) =>
-                  typeof value === "string" ? setChosen({ ...chosen, [tier]: value }) : undefined
+                  typeof value === 'string' ? setChosen({ ...chosen, [tier]: value }) : undefined
                 }
               >
                 <SelectTrigger className="w-full">
@@ -142,8 +139,8 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
             <div className="space-y-1.5">
               <p className="text-xs text-muted-foreground">
                 {available && available.length === 0
-                  ? t("settings.listFailed")
-                  : t("settings.manual")}
+                  ? t('settings.listFailed')
+                  : t('settings.manual')}
               </p>
               <Input
                 value={chosen[tier]}
@@ -164,12 +161,12 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
       <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
         <Button onClick={save} disabled={saving}>
           {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-          {t("common.save")}
+          {t('common.save')}
         </Button>
         {dirty ? (
           <Button variant="ghost" onClick={() => setChosen(defaults)} disabled={saving}>
             <RotateCcw className="size-4" />
-            {t("settings.defaults")}
+            {t('settings.defaults')}
           </Button>
         ) : null}
       </div>

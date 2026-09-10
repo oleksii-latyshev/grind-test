@@ -260,6 +260,13 @@ Tauri events (`generation://progress`). A crash or quit must never lose complete
   `event.currentTarget` — reading it in there throws mid-render and unmounts the whole tree.
 - Keep the ladder thresholds in `src/lib/study.ts` (`stageOf`), never inline in a component.
 
+## Tests
+
+Frontend logic worth testing lives in `src/lib`, pure, with a `*.test.ts` beside it (`bun test`,
+no DOM). `src-tauri/tests/pipeline.rs` runs syllabus → notes → session → grading against a temp
+vault with `agy` swapped for a shell script via `GRIND_AGY_BIN`, and asserts the tier of every
+call — the model-economy rule is enforced by that test, not just by this file.
+
 ## Commands
 
 `bundle.targets` in `tauri.conf.json` must stay a cross-platform list (`app` + `nsis`). Tauri
@@ -278,6 +285,9 @@ GitHub retired the `macos-13` Intel image.
 bun run dev            # vite only
 bun run tauri dev      # full app
 bun run build          # tsc + vite build
+bun run check          # biome lint + format (check:fix to apply)
+bun test               # unit tests beside src/lib
+bun run test:rust      # cargo unit tests + tests/pipeline.rs
 cd src-tauri && cargo check
 cd src-tauri && cargo run -p grind -- knowledge --subject demo
 cd src-tauri && cargo run -p grind -- session --subject demo --size 2

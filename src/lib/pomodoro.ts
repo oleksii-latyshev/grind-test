@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { usePreference } from "./prefs";
+import { usePreference } from './prefs';
 
-export type Phase = "work" | "short" | "long";
+export type Phase = 'work' | 'short' | 'long';
 
 export interface PomodoroSettings {
   /** Minutes. */
@@ -19,12 +19,17 @@ export const DEFAULT_POMODORO: PomodoroSettings = { work: 25, short: 5, long: 15
 export const POMODORO_LIMITS = { work: [5, 90], short: [1, 30], long: [5, 60], every: [2, 8] };
 
 function isSettings(value: unknown): value is PomodoroSettings {
-  if (!value || typeof value !== "object") return false;
+  if (!value || typeof value !== 'object') return false;
   const settings = value as Record<string, unknown>;
   return (Object.keys(POMODORO_LIMITS) as (keyof PomodoroSettings)[]).every((key) => {
     const [min, max] = POMODORO_LIMITS[key];
     const candidate = settings[key];
-    return typeof candidate === "number" && Number.isInteger(candidate) && candidate >= min && candidate <= max;
+    return (
+      typeof candidate === 'number' &&
+      Number.isInteger(candidate) &&
+      candidate >= min &&
+      candidate <= max
+    );
   });
 }
 
@@ -46,39 +51,41 @@ interface Runtime {
 }
 
 function isRuntime(value: unknown): value is Runtime {
-  if (!value || typeof value !== "object") return false;
+  if (!value || typeof value !== 'object') return false;
   const { phase, round, endsAt, left } = value as Partial<Runtime>;
   return (
-    (phase === "work" || phase === "short" || phase === "long") &&
-    typeof round === "number" &&
-    (endsAt === null || typeof endsAt === "number") &&
-    typeof left === "number"
+    (phase === 'work' || phase === 'short' || phase === 'long') &&
+    typeof round === 'number' &&
+    (endsAt === null || typeof endsAt === 'number') &&
+    typeof left === 'number'
   );
 }
 
 const minutes = (value: number) => value * 60_000;
 
 function freshRuntime(settings: PomodoroSettings): Runtime {
-  return { phase: "work", round: 0, endsAt: null, left: minutes(settings.work) };
+  return { phase: 'work', round: 0, endsAt: null, left: minutes(settings.work) };
 }
 
 function durationOf(phase: Phase, settings: PomodoroSettings): number {
-  return minutes(phase === "work" ? settings.work : phase === "short" ? settings.short : settings.long);
+  return minutes(
+    phase === 'work' ? settings.work : phase === 'short' ? settings.short : settings.long,
+  );
 }
 
 /** What follows the phase that just ended. */
-function advance(runtime: Runtime, settings: PomodoroSettings): Runtime {
-  if (runtime.phase !== "work") {
-    return { phase: "work", round: runtime.round, endsAt: null, left: minutes(settings.work) };
+export function advance(runtime: Runtime, settings: PomodoroSettings): Runtime {
+  if (runtime.phase !== 'work') {
+    return { phase: 'work', round: runtime.round, endsAt: null, left: minutes(settings.work) };
   }
   const round = runtime.round + 1;
-  const phase: Phase = round % settings.every === 0 ? "long" : "short";
+  const phase: Phase = round % settings.every === 0 ? 'long' : 'short';
   return { phase, round, endsAt: null, left: durationOf(phase, settings) };
 }
 
 export function formatClock(ms: number): string {
   const total = Math.max(0, Math.round(ms / 1000));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
 /**
@@ -90,11 +97,15 @@ export function formatClock(ms: number): string {
  */
 export function usePomodoro(onPhaseEnd: (next: Phase) => void) {
   const [settings, setSettings] = usePreference<PomodoroSettings>(
-    "grind:pomodoro-settings",
+    'grind:pomodoro-settings',
     DEFAULT_POMODORO,
     isSettings,
   );
-  const [runtime, setRuntime] = usePreference<Runtime>("grind:pomodoro", freshRuntime(settings), isRuntime);
+  const [runtime, setRuntime] = usePreference<Runtime>(
+    'grind:pomodoro',
+    freshRuntime(settings),
+    isRuntime,
+  );
   // Re-rendered every second while running; the value itself lives in `runtime`.
   const [, tick] = useState(0);
 
@@ -104,7 +115,7 @@ export function usePomodoro(onPhaseEnd: (next: Phase) => void) {
   announce.current = onPhaseEnd;
 
   const running = runtime.endsAt !== null;
-  const left = running ? Math.max(0, runtime.endsAt! - Date.now()) : runtime.left;
+  const left = runtime.endsAt === null ? runtime.left : Math.max(0, runtime.endsAt - Date.now());
 
   useEffect(() => {
     if (!running) return;

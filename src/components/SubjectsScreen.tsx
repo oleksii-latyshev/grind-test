@@ -1,18 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
-import { ArrowRight, FolderOpen, Loader2, TriangleAlert } from "lucide-react";
-import { toast } from "sonner";
-
-import { useT } from "@/i18n";
-import type { Translate } from "@/i18n";
-import { VaultCard } from "@/components/VaultCard";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
-import { api, errorMessage } from "@/lib/api";
-import type { SubjectOverview, VaultInfo } from "@/lib/types";
+import { ArrowRight, FolderOpen, Loader2, TriangleAlert } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { VaultCard } from '@/components/VaultCard';
+import type { Translate } from '@/i18n';
+import { useT } from '@/i18n';
+import { api, errorMessage } from '@/lib/api';
+import type { SubjectOverview, VaultInfo } from '@/lib/types';
 
 interface Props {
   /** Owned by `App`, which decides between this screen and setup. */
@@ -26,6 +25,7 @@ export function SubjectsScreen({ vault, onVaultChange, onOpen }: Props) {
   const [subjects, setSubjects] = useState<SubjectOverview[] | null>(null);
   const [choosing, setChoosing] = useState(false);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a different vault folder must reload the list.
   const load = useCallback(async () => {
     if (!vault.readable) {
       // No point asking for subjects we cannot read; the vault card explains why.
@@ -50,7 +50,7 @@ export function SubjectsScreen({ vault, onVaultChange, onOpen }: Props) {
       const info = await api.chooseVault();
       onVaultChange(info);
       if (info.readable) {
-        toast.success(t("vault.connected", { count: info.subject_count }));
+        toast.success(t('vault.connected', { count: info.subject_count }));
       } else if (info.error) {
         toast.error(info.error);
       }
@@ -64,19 +64,17 @@ export function SubjectsScreen({ vault, onVaultChange, onOpen }: Props) {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 p-8">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("subjects.title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subjects.subtitle")}</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('subjects.title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('subjects.subtitle')}</p>
       </header>
 
-      {!vault.readable ? (
-        <VaultCard vault={vault} busy={choosing} onChoose={chooseVault} />
-      ) : null}
+      {!vault.readable ? <VaultCard vault={vault} busy={choosing} onChoose={chooseVault} /> : null}
 
       {vault.readable && !vault.agy_binary ? (
         <Alert variant="destructive">
           <TriangleAlert />
-          <AlertTitle>{t("agy.missing.title")}</AlertTitle>
-          <AlertDescription>{t("agy.missing.body")}</AlertDescription>
+          <AlertTitle>{t('agy.missing.title')}</AlertTitle>
+          <AlertDescription>{t('agy.missing.body')}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -89,7 +87,7 @@ export function SubjectsScreen({ vault, onVaultChange, onOpen }: Props) {
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-12 text-center text-sm text-muted-foreground">
             <FolderOpen className="size-6" />
-            <p>{t("subjects.empty")}</p>
+            <p>{t('subjects.empty')}</p>
             <p className="font-mono text-xs">{vault.root}/syllabus/*.md</p>
           </CardContent>
         </Card>
@@ -104,11 +102,11 @@ export function SubjectsScreen({ vault, onVaultChange, onOpen }: Props) {
       {vault.readable ? (
         <footer className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
           <p className="font-mono text-xs text-muted-foreground">
-            {t("vault.label", { root: vault.root })}
+            {t('vault.label', { root: vault.root })}
           </p>
           <Button variant="ghost" size="sm" onClick={chooseVault} disabled={choosing}>
             {choosing ? <Loader2 className="size-4 animate-spin" /> : null}
-            {t("vault.change")}
+            {t('vault.change')}
           </Button>
         </footer>
       ) : null}
@@ -143,7 +141,7 @@ function SubjectCard({
       <CardContent className="flex flex-1 flex-col justify-end gap-4">
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{t("subjects.notes")}</span>
+            <span>{t('subjects.notes')}</span>
             <span className="font-mono">
               {subject.knowledge_count}/{subject.topic_count}
             </span>
@@ -153,11 +151,11 @@ function SubjectCard({
 
         <div className="flex items-center justify-between">
           <div className="flex gap-4 text-xs text-muted-foreground">
-            <span>{t("subjects.quizzes", { count: subject.quiz_count })}</span>
-            <span>{t("subjects.accuracy", { percent: subject.accuracy_percent })}</span>
+            <span>{t('subjects.quizzes', { count: subject.quiz_count })}</span>
+            <span>{t('subjects.accuracy', { percent: subject.accuracy_percent })}</span>
           </div>
           <Button size="sm" onClick={() => onOpen(subject.id)}>
-            {t("subjects.open")}
+            {t('subjects.open')}
             <ArrowRight className="size-4" />
           </Button>
         </div>

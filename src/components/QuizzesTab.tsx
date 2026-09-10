@@ -1,24 +1,22 @@
-import { useState } from "react";
-import { Loader2, Play, Wand2 } from "lucide-react";
-import { toast } from "sonner";
-
-import { useIntl } from "react-intl";
-
-import { useT } from "@/i18n";
-import type { MessageId } from "@/i18n";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { api, errorMessage } from "@/lib/api";
-import type { Difficulty, Quiz, SubjectDetail } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { Loader2, Play, Wand2 } from 'lucide-react';
+import { useState } from 'react';
+import { useIntl } from 'react-intl';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import type { MessageId } from '@/i18n';
+import { useT } from '@/i18n';
+import { api, errorMessage } from '@/lib/api';
+import type { Difficulty, Quiz, SubjectDetail } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const COUNTS = [5, 10, 15, 20];
 const DIFFICULTIES: { value: Difficulty; label: MessageId }[] = [
-  { value: "easy", label: "difficulty.easy" },
-  { value: "medium", label: "difficulty.medium" },
-  { value: "hard", label: "difficulty.hard" },
-  { value: "mixed", label: "difficulty.mixed" },
+  { value: 'easy', label: 'difficulty.easy' },
+  { value: 'medium', label: 'difficulty.medium' },
+  { value: 'hard', label: 'difficulty.hard' },
+  { value: 'mixed', label: 'difficulty.mixed' },
 ];
 
 interface Props {
@@ -31,7 +29,7 @@ export function QuizzesTab({ detail, onStart, onRefresh }: Props) {
   const t = useT();
   const intl = useIntl();
   const [count, setCount] = useState(10);
-  const [difficulty, setDifficulty] = useState<Difficulty>("mixed");
+  const [difficulty, setDifficulty] = useState<Difficulty>('mixed');
   const [generating, setGenerating] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
 
@@ -70,11 +68,11 @@ export function QuizzesTab({ detail, onStart, onRefresh }: Props) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>{t("quizzes.new")}</CardTitle>
-          <CardDescription>{t("quizzes.new.blurb")}</CardDescription>
+          <CardTitle>{t('quizzes.new')}</CardTitle>
+          <CardDescription>{t('quizzes.new.blurb')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Field label={t("quizzes.count")}>
+          <Field label={t('quizzes.count')}>
             {COUNTS.map((value) => (
               <Choice key={value} active={count === value} onClick={() => setCount(value)}>
                 {value}
@@ -82,7 +80,7 @@ export function QuizzesTab({ detail, onStart, onRefresh }: Props) {
             ))}
           </Field>
 
-          <Field label={t("quizzes.difficulty")}>
+          <Field label={t('quizzes.difficulty')}>
             {DIFFICULTIES.map((option) => (
               <Choice
                 key={option.value}
@@ -96,20 +94,24 @@ export function QuizzesTab({ detail, onStart, onRefresh }: Props) {
 
           <div className="flex items-center gap-3 pt-1">
             <Button onClick={generate} disabled={generating || !ready}>
-              {generating ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
-              {t("quizzes.generate")}
+              {generating ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Wand2 className="size-4" />
+              )}
+              {t('quizzes.generate')}
             </Button>
             {!ready ? (
-              <p className="text-sm text-muted-foreground">{t("quizzes.needNotes")}</p>
+              <p className="text-sm text-muted-foreground">{t('quizzes.needNotes')}</p>
             ) : null}
           </div>
         </CardContent>
       </Card>
 
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold tracking-tight">{t("quizzes.saved")}</h3>
+        <h3 className="text-sm font-semibold tracking-tight">{t('quizzes.saved')}</h3>
         {detail.quizzes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("quizzes.none")}</p>
+          <p className="text-sm text-muted-foreground">{t('quizzes.none')}</p>
         ) : (
           <ul className="divide-y divide-border rounded-4xl border border-border">
             {detail.quizzes.map((quiz) => (
@@ -120,11 +122,13 @@ export function QuizzesTab({ detail, onStart, onRefresh }: Props) {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{quiz.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {intl.formatDate(quiz.created_at, { dateStyle: "medium", timeStyle: "short" })}
+                    {intl.formatDate(quiz.created_at, { dateStyle: 'medium', timeStyle: 'short' })}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <Badge variant="secondary">{t("quizzes.questions", { count: quiz.question_count })}</Badge>
+                  <Badge variant="secondary">
+                    {t('quizzes.questions', { count: quiz.question_count })}
+                  </Badge>
                   <Button
                     size="sm"
                     variant="outline"
@@ -136,7 +140,7 @@ export function QuizzesTab({ detail, onStart, onRefresh }: Props) {
                     ) : (
                       <Play className="size-4" />
                     )}
-                    {t("quizzes.take")}
+                    {t('quizzes.take')}
                   </Button>
                 </div>
               </li>
@@ -172,10 +176,10 @@ function Choice({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "rounded-4xl border px-4 py-1.5 text-sm transition-colors",
+        'rounded-4xl border px-4 py-1.5 text-sm transition-colors',
         active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-input bg-input/30 hover:bg-muted",
+          ? 'border-primary bg-primary text-primary-foreground'
+          : 'border-input bg-input/30 hover:bg-muted',
       )}
     >
       {children}

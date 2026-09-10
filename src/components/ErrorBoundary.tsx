@@ -1,9 +1,8 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
-import { RotateCcw, TriangleAlert } from "lucide-react";
-
-import { useT } from "@/i18n";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { RotateCcw, TriangleAlert } from 'lucide-react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { useT } from '@/i18n';
 
 interface Props {
   children: ReactNode;
@@ -16,14 +15,14 @@ function ErrorText() {
   const t = useT();
   return (
     <>
-      <h2 className="text-sm font-semibold">{t("error.title")}</h2>
-      <p className="text-sm leading-relaxed text-muted-foreground">{t("error.body")}</p>
+      <h2 className="text-sm font-semibold">{t('error.title')}</h2>
+      <p className="text-sm leading-relaxed text-muted-foreground">{t('error.body')}</p>
     </>
   );
 }
 
 function ErrorHomeLabel() {
-  return <>{useT()("error.home")}</>;
+  return <>{useT()('error.home')}</>;
 }
 
 interface State {
@@ -43,7 +42,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("render error", error, info.componentStack);
+    console.error('render error', error, info.componentStack);
   }
 
   render() {

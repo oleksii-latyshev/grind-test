@@ -1,11 +1,11 @@
-import { useCallback, useLayoutEffect, useState } from "react";
+import { useCallback, useLayoutEffect, useState } from 'react';
 
 /** Body text sizes in px, the way a reader app offers them: a few deliberate steps. */
 export const READING_SIZES = [15, 16, 17, 19, 21, 24] as const;
 
 const DEFAULT_INDEX = 1;
-const STORAGE_KEY = "grind:reading-size";
-const CSS_VARIABLE = "--reading-font-size";
+const STORAGE_KEY = 'grind:reading-size';
+const CSS_VARIABLE = '--reading-font-size';
 
 function readStoredIndex(): number {
   try {

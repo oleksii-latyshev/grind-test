@@ -1,9 +1,10 @@
-import { fileURLToPath, URL } from 'node:url'
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import process from 'node:process'
-const host = process.env.TAURI_DEV_HOST
+import process from 'node:process';
+import { fileURLToPath, URL } from 'node:url';
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+
+const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(() => ({
@@ -38,4 +39,4 @@ export default defineConfig(() => ({
       ignored: ['**/src-tauri/**'],
     },
   },
-}))
+}));

@@ -3,8 +3,8 @@
  * Rust owns the vault, this file only describes what comes across `invoke()`.
  */
 
-export type Difficulty = "easy" | "medium" | "hard" | "mixed";
-export type QuestionKind = "single" | "multi";
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'mixed';
+export type QuestionKind = 'single' | 'multi';
 
 export interface Topic {
   id: string;
@@ -183,15 +183,15 @@ export interface QuizRequest {
 }
 
 export type GenerationEvent =
-  | { kind: "started"; subject: string; total: number; skipped: number }
-  | { kind: "topic_started"; topic_id: string; title: string }
-  | { kind: "topic_done"; topic_id: string; title: string; done: number; total: number }
-  | { kind: "topic_failed"; topic_id: string; title: string; error: string }
-  | { kind: "finished"; generated: number; failed: number; total_tokens: number };
+  | { kind: 'started'; subject: string; total: number; skipped: number }
+  | { kind: 'topic_started'; topic_id: string; title: string }
+  | { kind: 'topic_done'; topic_id: string; title: string; done: number; total: number }
+  | { kind: 'topic_failed'; topic_id: string; title: string; error: string }
+  | { kind: 'finished'; generated: number; failed: number; total_tokens: number };
 
 /* ------------------------------------------------------------------ study */
 
-export type Stage = "new" | "reading" | "learning" | "review" | "mastered";
+export type Stage = 'new' | 'reading' | 'learning' | 'review' | 'mastered';
 
 export interface TopicStudy {
   topic_id: string;
@@ -233,10 +233,10 @@ export interface OpenQuestion {
 }
 
 /** How a session trades depth for coverage. */
-export type SessionMode = "full" | "balanced" | "sprint";
+export type SessionMode = 'full' | 'balanced' | 'sprint';
 
 /** How topics are chosen when they are not listed explicitly. */
-export type Selection = "scheduled" | "spread";
+export type Selection = 'scheduled' | 'spread';
 
 export interface SessionPlan {
   id: string;
