@@ -76,8 +76,12 @@ cd src-tauri && cargo run -p grind -- knowledge --subject demo --concurrency 4
 ```
 
 To build it: `bun run tauri build` — a `.app` on macOS, an NSIS installer on Windows.
-Releases also carry a universal `.dmg`, assembled in CI with `hdiutil` because Tauri's own
-dmg bundler needs Finder automation that no CI runner has.
+
+Releases carry three downloads: an Apple Silicon `.dmg` (4 MB), a universal one for Intel
+Macs (7.6 MB), and the Windows installer. Both images come from the same universal build —
+the arm64 one is `lipo`-thinned out of it, so an M-series Mac is not asked to download an
+Intel slice it will never run. They are assembled with `hdiutil`, because Tauri's own dmg
+bundler needs Finder automation that no CI runner has.
 
 ## The vault
 

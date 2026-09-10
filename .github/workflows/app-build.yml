@@ -17,13 +17,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # One universal binary rather than a runner per architecture: GitHub retired the
-          # `macos-13` Intel image, and a universal build covers both Macs from one leg.
-          - label: macOS (universal)
+          # One `universal-apple-darwin` build rather than a runner per architecture: GitHub
+          # retired the `macos-13` Intel image, and this build compiles both slices anyway —
+          # which is also what lets the leg ship an arm64-only image without building twice.
+          - label: macOS
             os: macos-latest
             rust-target: universal-apple-darwin
             toolchain-targets: aarch64-apple-darwin,x86_64-apple-darwin
-            artifact: grind-test-macos
           - label: Windows
             os: windows-latest
             rust-target: x86_64-pc-windows-msvc
@@ -52,39 +52,74 @@ jobs:
       - name: Build the app
         run: bun run tauri build --target ${{ matrix.rust-target }}
 
-      # `upload-artifact` does not preserve the executable bit, which would leave the
-      # unpacked .app unable to launch. `ditto` produces the same archive format the App
-      # Store tooling uses and keeps the bundle intact.
-      - name: Pack the macOS app
+      # Two images from the one build. Most Macs are Apple Silicon and should not have to
+      # download an Intel slice they will never run; the universal image stays for Intel
+      # machines and for anyone who does not want to know which they have.
+      #
+      # The arm64 image is `lipo -thin`-ed out of the universal binary, so it *is* the
+      # arm64 build rather than a second compile of it. Thinning would invalidate a code
+      # signature — these builds are unsigned, so there is none to break.
+      #
+      # A disk image also preserves the bundle's executable bit, which `upload-artifact`
+      # strips from a bare `.app`. Built with `hdiutil` rather than Tauri's dmg bundler,
+      # which drives Finder over AppleScript purely to lay the window out prettily and dies
+      # with "Not authorised to send Apple events to Finder (-1743)" on any machine without
+      # Automation permission — CI included.
+      - name: Bundle the macOS disk images
         if: runner.os == 'macOS'
         run: |
-          ditto -c -k --keepParent \
-            "src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos/grind-test.app" \
-            "${{ matrix.artifact }}.zip"
+          set -euo pipefail
+          app="src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos/grind-test.app"
 
-      # Built here rather than by Tauri's dmg bundler, which drives Finder over AppleScript
-      # purely to lay the window out prettily, and dies with "Not authorised to send Apple
-      # events to Finder (-1743)" on any machine without Automation permission — CI
-      # included. `hdiutil` needs no such permission, and drag-to-Applications is the whole
-      # of what the image has to do.
-      - name: Bundle the macOS disk image
-        if: runner.os == 'macOS'
-        run: |
-          stage="$(mktemp -d)"
-          cp -R "src-tauri/target/${{ matrix.rust-target }}/release/bundle/macos/grind-test.app" "$stage/"
-          ln -s /Applications "$stage/Applications"
-          hdiutil create -volname grind-test -srcfolder "$stage" -ov -format UDZO \
-            "${{ matrix.artifact }}.dmg"
-          hdiutil verify "${{ matrix.artifact }}.dmg"
+          # make_dmg <output.dmg> [arch-to-keep]
+          make_dmg() {
+            stage="$(mktemp -d)"
+            cp -R "$app" "$stage/"
+            ln -s /Applications "$stage/Applications"
+            if [ "$#" -ge 2 ]; then
+              bin="$stage/grind-test.app/Contents/MacOS/grind-test"
+              lipo -thin "$2" "$bin" -output "$bin.thin"
+              mv "$bin.thin" "$bin"
+            fi
+            hdiutil create -volname grind-test -srcfolder "$stage" -ov -format UDZO "$1"
+            hdiutil verify "$1"
+            rm -rf "$stage"
+          }
 
-      - name: Upload macOS build
+          make_dmg grind-test-macos-arm64.dmg arm64
+          make_dmg grind-test-macos-universal.dmg
+
+          # A wrong slice is an image that refuses to launch on half the Macs it is offered
+          # to, and nothing downstream would notice — so assert what actually landed in
+          # each one, not just that the files exist.
+          slices() {
+            mount="$(mktemp -d)"
+            hdiutil attach "$1" -nobrowse -readonly -mountpoint "$mount" > /dev/null
+            lipo -archs "$mount/grind-test.app/Contents/MacOS/grind-test" \
+              | tr ' ' '\n' | sort | paste -sd, -
+            hdiutil detach "$mount" -quiet
+          }
+          arm="$(slices grind-test-macos-arm64.dmg)"
+          universal="$(slices grind-test-macos-universal.dmg)"
+          echo "arm64 image: $arm | universal image: $universal"
+          test "$arm" = arm64
+          test "$universal" = arm64,x86_64
+
+      - name: Upload the Apple Silicon image
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: |
-            ${{ matrix.artifact }}.dmg
-            ${{ matrix.artifact }}.zip
+          name: grind-test-macos-arm64
+          path: grind-test-macos-arm64.dmg
+          retention-days: ${{ inputs.retention-days }}
+          if-no-files-found: error
+
+      - name: Upload the universal image
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: grind-test-macos-universal
+          path: grind-test-macos-universal.dmg
           retention-days: ${{ inputs.retention-days }}
           if-no-files-found: error
 

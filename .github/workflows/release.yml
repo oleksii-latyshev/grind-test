@@ -52,8 +52,7 @@ jobs:
       - name: Collect the bundles
         run: |
           mkdir -p release
-          find bundles -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.zip' \) \
-            -exec mv {} release/ \;
+          find bundles -type f \( -name '*.dmg' -o -name '*.exe' \) -exec mv {} release/ \;
           ls -la release
 
       - uses: softprops/action-gh-release@v2
@@ -67,8 +66,8 @@ jobs:
             right-click the app and choose **Open** once, or run
             `xattr -dr com.apple.quarantine /Applications/grind-test.app`.
 
-            | File | Platform |
+            | File | For |
             |---|---|
-            | `.dmg` | macOS, universal (Apple Silicon + Intel) |
-            | `grind-test-macos.zip` | the same `.app`, unpacked |
+            | `grind-test-macos-arm64.dmg` | Apple Silicon Macs — M1 and later |
+            | `grind-test-macos-universal.dmg` | Intel Macs, or if you would rather not check |
             | `*-setup.exe` | Windows x64 |
