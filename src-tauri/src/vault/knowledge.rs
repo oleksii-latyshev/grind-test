@@ -121,11 +121,7 @@ fn parse(raw: &str, path: &PathBuf) -> KnowledgeNote {
 pub const CORE_HEADING: &str = "## Головне";
 
 /// Headings the generator always writes, and the only ones a fast revision pass needs.
-const DIGEST_SECTIONS: [&str; 3] = [
-    CORE_HEADING,
-    "## Ключові терміни",
-    "## На чому підловлюють",
-];
+const DIGEST_SECTIONS: [&str; 3] = [CORE_HEADING, "## Ключові терміни", "## На чому підловлюють"];
 
 /// A short version of a note for fast revision: the opening summary, the one-paragraph
 /// answer, and the key-terms and exam-traps sections.

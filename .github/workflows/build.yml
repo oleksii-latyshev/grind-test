@@ -33,6 +33,13 @@ jobs:
           done
           exit $missing
 
+      # Biome holds TypeScript to 300 lines a file (`noExcessiveLinesPerFile`). Rust is out of
+      # its reach, so the same limit is checked here — before any toolchain is installed.
+      - name: No Rust file over 300 lines
+        run: |
+          find src-tauri/src src-tauri/grind-cli/src src-tauri/tests -name '*.rs' -exec wc -l {} + \
+            | awk '$2 != "total" && $1 > 300 { print "::error file=" $2 "::" $1 " lines; the limit is 300 (CODE_REQUIREMENTS.md §1)"; failed = 1 } END { exit failed }'
+
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run check
@@ -40,6 +47,20 @@ jobs:
       # `bun run build` is `tsc && vite build`, so this is the type check too. It needs no
       # Rust toolchain, which makes it the fastest signal on a broken commit.
       - run: bun run build
+
+  # Its own job: rustfmt needs no dependencies and no build, so this answers in seconds instead
+  # of waiting behind the platform builds.
+  rustfmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: cargo fmt --check
+        working-directory: src-tauri
+        run: cargo fmt --all --check
 
   e2e:
     name: e2e

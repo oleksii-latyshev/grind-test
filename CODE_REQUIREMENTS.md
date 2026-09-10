@@ -30,9 +30,12 @@ src-tauri/tests/        the pipeline against a temp vault and a fake agy
 - Import through `@/…`; only files in the same folder import each other relatively. No barrels.
 - **Files stay under 300 lines**, enforced by Biome (`noExcessiveLinesPerFile`). A component that
   outgrows it becomes a folder named after it (`features/study/components/StudySession/`), one
-  file per part. Split by screen or by job (`generate/session.rs`), never by kind (`hooks/`,
+  file per part. Split by screen or by job (`generate/session/plan.rs`), never by kind (`hooks/`,
   `helpers/`). An exception — a generated file, a data table — is an override in `biome.json`,
-  never a silent suppression. Rust follows the same limit; nothing enforces it there yet.
+  never a silent suppression. Rust follows the same limit, checked in CI (`build.yml`); unit
+  tests that push a module over it move to a `tests.rs` beside it.
+- A Rust module split into a directory re-exports its public surface from `mod.rs`, so callers
+  keep writing `generate::plan_session` whichever file it lives in.
 - **Rust owns the vault.** A rule that decides something — scoring, scheduling, what a session
   contains — lives in Rust and the UI renders its result. A rule the UI needs without a round
   trip (`stageOf`) lives in `src/lib`, once, and names its Rust counterpart.
@@ -119,6 +122,7 @@ bun run typecheck
 bun test
 bun run test:rust
 bun run test:e2e
+cd src-tauri && cargo fmt --all --check
 ```
 
-CI runs all of them. Rust is formatted with `cargo fmt`.
+CI runs all of them, plus the 300-line limit for Rust.

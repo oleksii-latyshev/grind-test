@@ -139,12 +139,12 @@ Layout:
 | `src-tauri/src/vault/syllabus.rs` | parse `vault/syllabus/*.md` → subjects/sections/topics |
 | `src-tauri/src/vault/knowledge.rs` | read/write knowledge notes + frontmatter |
 | `src-tauri/src/vault/quiz.rs` | quiz model, read/write `vault/quizzes/` |
-| `src-tauri/src/vault/progress.rs` | attempts, mastery aggregation, topic weighting |
-| `src-tauri/src/vault/study.rs` | study state, session planning, review scheduling |
-| `src-tauri/src/agy.rs` | spawn the `agy` CLI, parse its JSON envelope |
-| `src-tauri/src/generate.rs` | prompt assembly + the three generation jobs |
-| `src-tauri/src/commands.rs` | `#[tauri::command]` surface |
-| `src-tauri/grind-cli/src/main.rs` | terminal CLI over the same functions (own crate) |
+| `src-tauri/src/vault/progress/` | attempts and mastery; `weighting.rs` biases quizzes, `stats.rs` the dashboard |
+| `src-tauri/src/vault/study/` | study state and review scheduling; `planning.rs` picks what a session serves |
+| `src-tauri/src/agy/` | spawn the `agy` CLI, parse its JSON envelope; `tiers.rs` maps tiers to model ids |
+| `src-tauri/src/generate/` | prompt assembly, one module per job: `knowledge`, `batch`, `quiz`, `hint`, `session/` |
+| `src-tauri/src/commands/` | `#[tauri::command]` surface, one module per screen |
+| `src-tauri/grind-cli/src/` | terminal CLI over the same functions (own crate); `report.rs` does the printing |
 | `src-tauri/prompts/*.md` | prompt templates, `include_str!`-embedded |
 | `src-tauri/schemas/*.json` | JSON schemas passed to `agy --json-schema` |
 

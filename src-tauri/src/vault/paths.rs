@@ -46,9 +46,9 @@ pub fn create_vault(root: &Path) -> std::io::Result<()> {
     let sample = root.join("syllabus").join("sample.md");
     let empty = std::fs::read_dir(root.join("syllabus"))
         .map(|entries| {
-            !entries.flatten().any(|entry| {
-                entry.path().extension().and_then(|e| e.to_str()) == Some("md")
-            })
+            !entries
+                .flatten()
+                .any(|entry| entry.path().extension().and_then(|e| e.to_str()) == Some("md"))
         })
         .unwrap_or(true);
     if empty {

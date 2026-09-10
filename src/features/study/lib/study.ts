@@ -24,10 +24,10 @@ export const STAGES: Record<Stage, { label: MessageId; className: string }> = {
   mastered: { label: 'stage.mastered', className: 'text-primary' },
 };
 
-/** Mirrors REVIEW_INTERVALS_DAYS in `src-tauri/src/vault/study.rs`. */
+/** Mirrors REVIEW_INTERVALS_DAYS in `src-tauri/src/vault/study/mod.rs`. */
 export const MAX_LEVEL = 6;
 
-/** Mirrors MAX_SESSION_TOPICS in `src-tauri/src/generate.rs`. */
+/** Mirrors MAX_SESSION_TOPICS in `src-tauri/src/generate/session/mode.rs`. */
 export const MAX_SESSION_TOPICS = 6;
 
 /** The ladder thresholds live in one place rather than in each view that renders a badge. */

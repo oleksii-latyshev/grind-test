@@ -165,7 +165,9 @@ fn flatten(subject_id: &str, section: &Section, items: Vec<RawItem>) -> Vec<Topi
 
     while index < items.len() {
         let item = &items[index];
-        let has_children = items.get(index + 1).is_some_and(|next| next.depth > item.depth);
+        let has_children = items
+            .get(index + 1)
+            .is_some_and(|next| next.depth > item.depth);
 
         if item.depth == 1 && has_children {
             let group = item.text.clone();
